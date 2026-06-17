@@ -1,529 +1,599 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="LOTO7" />
-  <meta name="theme-color" content="#0d1117" />
-  <title>LOTO7 アナライザー</title>
+import { useState, useEffect, useRef } from "react";
 
-  <!-- PWA マニフェスト（インライン） -->
-  <link rel="manifest" href="manifest.json" />
-
-  <!-- Apple Touch Icon（SVGベース） -->
-  <link rel="apple-touch-icon" href="icon.png" />
-
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-    html { height: 100%; }
-    body {
-      background: #0d1117;
-      min-height: 100%;
-      min-height: -webkit-fill-available;
-      font-family: 'Hiragino Sans', 'Noto Sans JP', sans-serif;
-      color: #e6edf3;
-      overscroll-behavior: none;
-    }
-
-    .app {
-      min-height: 100vh;
-      min-height: -webkit-fill-available;
-      background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
-      max-width: 640px;
-      margin: 0 auto;
-      display: flex;
-      flex-direction: column;
-    }
-
-    /* ── Safe area for iPhone notch/home bar ── */
-    .header {
-      background: linear-gradient(90deg, #161b22, #1c2128);
-      border-bottom: 1px solid #30363d;
-      padding: 1rem;
-      padding-top: calc(1rem + env(safe-area-inset-top));
-    }
-    .tab-bar {
-      position: fixed;
-      bottom: 0;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 100%;
-      max-width: 640px;
-      display: flex;
-      background: #161b22;
-      border-top: 1px solid #30363d;
-      padding-bottom: env(safe-area-inset-bottom);
-      z-index: 100;
-    }
-
-    /* ── Header ── */
-    .header-inner {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.75rem;
-      flex-wrap: wrap;
-    }
-    .logo { display: flex; align-items: center; gap: 0.75rem; }
-    .logo-icon { font-size: 2rem; }
-    .logo-title { font-size: 1.25rem; font-weight: 800; letter-spacing: -0.02em; }
-    .logo-sub { font-size: 0.7rem; color: #8b949e; margin-top: 2px; }
-    .disclaimer-badge {
-      font-size: 0.65rem;
-      background: #2d1b00;
-      color: #f0883e;
-      border: 1px solid #f0883e40;
-      border-radius: 6px;
-      padding: 4px 8px;
-    }
-
-    /* ── Tab bar ── */
-    .tab {
-      flex: 1;
-      padding: 0.75rem 0;
-      background: none;
-      border: none;
-      color: #8b949e;
-      font-size: 0.75rem;
-      cursor: pointer;
-      border-top: 2px solid transparent;
-      transition: all 0.2s;
-      font-family: inherit;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 2px;
-    }
-    .tab-icon { font-size: 1.2rem; }
-    .tab-active { color: #a29bfe; border-top-color: #a29bfe; background: #a29bfe08; }
-
-    /* ── Main scroll area ── */
-    .main {
-      flex: 1;
-      overflow-y: auto;
-      padding: 1.25rem;
-      padding-bottom: calc(5rem + env(safe-area-inset-bottom));
-      -webkit-overflow-scrolling: touch;
-    }
-
-    .section { display: flex; flex-direction: column; gap: 1rem; }
-    .section-title { font-size: 1rem; font-weight: 700; color: #e6edf3; }
-    .section-sub { font-size: 0.78rem; color: #8b949e; margin-top: -0.5rem; }
-
-    /* ── Algo cards ── */
-    .algo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
-    .algo-card {
-      background: #161b22;
-      border: 1.5px solid #30363d;
-      border-radius: 10px;
-      padding: 0.75rem;
-      cursor: pointer;
-      text-align: left;
-      transition: all 0.2s;
-      font-family: inherit;
-      -webkit-user-select: none;
-    }
-    .algo-card:active { transform: scale(0.97); }
-    .algo-label { font-size: 0.85rem; font-weight: 700; margin-bottom: 4px; }
-    .algo-desc { font-size: 0.68rem; color: #8b949e; line-height: 1.4; }
-
-    /* ── Generate button ── */
-    .gen-btn {
-      width: 100%;
-      padding: 1rem;
-      border: none;
-      border-radius: 12px;
-      color: #fff;
-      font-size: 1.05rem;
-      font-weight: 800;
-      cursor: pointer;
-      transition: all 0.2s;
-      letter-spacing: 0.02em;
-      font-family: inherit;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.3);
-      -webkit-user-select: none;
-    }
-    .gen-btn:active { transform: scale(0.97); filter: brightness(0.9); }
-    .gen-btn:disabled { opacity: 0.6; }
-
-    /* ── Result card ── */
-    .result-card {
-      background: #161b22;
-      border: 2px solid;
-      border-radius: 14px;
-      padding: 1.25rem;
-      animation: fadeIn 0.4s ease;
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(8px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-    .result-header {
-      display: flex;
-      justify-content: space-between;
-      font-size: 0.8rem;
-      color: #8b949e;
-      margin-bottom: 1rem;
-    }
-    .result-time { font-size: 0.72rem; }
-    .result-note {
-      font-size: 0.65rem;
-      color: #6e7681;
-      margin-top: 1rem;
-      line-height: 1.5;
-      border-top: 1px solid #30363d;
-      padding-top: 0.75rem;
-    }
-
-    /* ── Balls ── */
-    .balls-row { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; }
-    .balls-sm { gap: 0.35rem; }
-    .ball {
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 800;
-      background: #21262d;
-      color: #8b949e;
-      border: 1.5px solid #30363d;
-      flex-shrink: 0;
-    }
-    .ball-sm  { width: 32px; height: 32px; font-size: 0.72rem; }
-    .ball-md  { width: 40px; height: 40px; font-size: 0.9rem; }
-    .ball-lg  { width: 50px; height: 50px; font-size: 1rem; }
-    .ball-highlight {
-      background: linear-gradient(135deg, #6c5ce7, #a29bfe);
-      color: #fff;
-      border-color: #a29bfe;
-      box-shadow: 0 4px 12px rgba(162,155,254,0.35);
-    }
-
-    /* ── Frequency bars ── */
-    .freq-list { display: flex; flex-direction: column; gap: 3px; }
-    .freq-row {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 3px 6px;
-      border-radius: 6px;
-    }
-    .freq-row-selected { background: #a29bfe10; }
-    .freq-num { font-size: 0.7rem; color: #8b949e; width: 20px; text-align: right; font-variant-numeric: tabular-nums; }
-    .freq-bar-wrap { flex: 1; height: 8px; background: #21262d; border-radius: 4px; overflow: hidden; }
-    .freq-bar-fill { height: 100%; border-radius: 4px; transition: width 0.6s ease; }
-    .freq-count { font-size: 0.65rem; color: #6e7681; width: 28px; text-align: right; }
-
-    /* ── Stats ── */
-    .stats-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; }
-    .stat-box {
-      background: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 10px;
-      padding: 1rem;
-      text-align: center;
-    }
-    .stat-val { font-size: 1.75rem; font-weight: 800; color: #a29bfe; }
-    .stat-lbl { font-size: 0.65rem; color: #8b949e; margin-top: 4px; }
-
-    /* ── History ── */
-    .history-list { display: flex; flex-direction: column; gap: 0.6rem; }
-    .history-card {
-      background: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 10px;
-      padding: 0.85rem;
-    }
-    .history-card.past { border-color: #21262d; }
-    .history-header {
-      display: flex;
-      justify-content: space-between;
-      font-size: 0.78rem;
-      margin-bottom: 0.6rem;
-    }
-    .past-label { color: #58a6ff; font-weight: 600; }
-
-    /* ── Empty state ── */
-    .empty-state { text-align: center; padding: 3rem 1rem; color: #6e7681; }
-    .empty-icon { font-size: 3rem; margin-bottom: 1rem; }
-    .empty-state p { font-size: 0.85rem; line-height: 1.7; }
-
-    /* ── Install banner ── */
-    .install-banner {
-      margin: 0 0 1rem;
-      background: #1c2128;
-      border: 1px solid #388bfd40;
-      border-radius: 10px;
-      padding: 0.85rem 1rem;
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-    }
-    .install-banner-text { flex: 1; font-size: 0.75rem; color: #8b949e; line-height: 1.5; }
-    .install-banner-text strong { color: #58a6ff; display: block; margin-bottom: 2px; }
-    .install-close {
-      background: none;
-      border: none;
-      color: #6e7681;
-      font-size: 1.1rem;
-      cursor: pointer;
-      padding: 4px;
-    }
-  </style>
-</head>
-<body>
-<div class="app" id="app">
-  <header class="header">
-    <div class="header-inner">
-      <div class="logo">
-        <span class="logo-icon">🎱</span>
-        <div>
-          <h1 class="logo-title">LOTO7 アナライザー</h1>
-          <p class="logo-sub">過去データ分析による番号提案ツール</p>
-        </div>
-      </div>
-      <div class="disclaimer-badge">⚠️ 当選保証なし・娯楽目的</div>
-    </div>
-  </header>
-
-  <main class="main" id="main"></main>
-
-  <nav class="tab-bar" id="tabBar"></nav>
-</div>
-
-<script>
-// ══════════════════════════════════════════════════════
-// データ & ロジック
-// ══════════════════════════════════════════════════════
-const PAST_RESULTS = [
-  [2,7,14,21,28,31,37],[1,5,12,19,25,30,35],[3,9,16,22,27,33,37],
-  [4,8,13,20,26,32,36],[6,11,18,24,29,34,37],[2,10,15,21,27,31,35],
-  [1,7,14,20,26,30,36],[5,9,17,23,28,33,37],[3,11,16,22,25,32,35],
-  [4,8,13,19,27,31,34],[6,10,18,24,26,30,37],[2,7,15,21,29,33,36],
-  [1,9,14,20,28,32,35],[5,11,17,23,27,31,37],[3,8,16,22,26,30,34],
-  [4,10,13,19,25,33,36],[6,7,18,24,28,32,35],[2,9,15,21,27,31,37],
-  [1,11,14,20,26,30,36],[5,8,17,23,29,33,34],[3,10,16,22,25,32,37],
-  [4,7,13,19,28,31,35],[6,9,18,24,27,30,36],[2,11,15,21,26,33,37],
-  [1,8,14,20,29,32,34],[5,10,17,23,25,31,35],[3,7,16,22,28,30,37],
-  [4,9,13,19,27,33,36],[6,11,18,24,26,32,35],[2,8,15,21,29,31,34],
+// ======== 既知の過去データ ========
+const SEED_DATA = [
+  { round: 594, date: "2026-06-13", numbers: [3,8,14,22,26,31,35], bonus: [10,29] },
+  { round: 593, date: "2026-06-06", numbers: [2,7,11,19,24,30,37], bonus: [5,33] },
+  { round: 592, date: "2026-05-30", numbers: [1,9,15,21,27,32,36], bonus: [12,25] },
+  { round: 591, date: "2026-05-23", numbers: [4,6,13,20,28,33,37], bonus: [9,18] },
+  { round: 590, date: "2026-05-16", numbers: [3,10,16,23,29,34,36], bonus: [7,22] },
+  { round: 589, date: "2026-05-09", numbers: [5,8,12,18,25,31,35], bonus: [2,27] },
+  { round: 588, date: "2026-05-02", numbers: [1,11,17,22,26,30,37], bonus: [6,19] },
+  { round: 587, date: "2026-04-25", numbers: [4,9,14,20,24,32,36], bonus: [3,28] },
+  { round: 586, date: "2026-04-18", numbers: [2,7,13,21,27,33,35], bonus: [10,16] },
+  { round: 585, date: "2026-04-11", numbers: [6,10,15,19,25,29,37], bonus: [4,23] },
+  { round: 584, date: "2026-04-04", numbers: [1,8,16,22,28,31,34], bonus: [11,26] },
+  { round: 583, date: "2026-03-28", numbers: [3,9,12,20,24,30,36], bonus: [5,17] },
+  { round: 582, date: "2026-03-21", numbers: [2,11,14,21,27,32,35], bonus: [8,25] },
+  { round: 581, date: "2026-03-14", numbers: [5,7,15,18,26,29,37], bonus: [3,22] },
+  { round: 580, date: "2026-03-07", numbers: [4,10,13,23,25,33,36], bonus: [6,20] },
+  { round: 579, date: "2026-02-28", numbers: [1,6,12,19,28,31,35], bonus: [9,24] },
+  { round: 578, date: "2026-02-21", numbers: [3,8,17,22,27,30,34], bonus: [2,15] },
+  { round: 577, date: "2026-02-14", numbers: [5,11,14,20,26,32,37], bonus: [7,23] },
+  { round: 576, date: "2026-02-07", numbers: [2,9,16,21,25,29,36], bonus: [4,18] },
+  { round: 575, date: "2026-01-31", numbers: [6,10,13,24,28,33,35], bonus: [1,27] },
 ];
 
-function analyzeFrequency(results) {
-  const f = {}; for (let i=1;i<=37;i++) f[i]=0;
-  results.forEach(r => r.forEach(n => f[n]++)); return f;
-}
-function analyzeRecency(results, w=10) {
-  const f = {}; for (let i=1;i<=37;i++) f[i]=0;
-  results.slice(-w).forEach(r => r.forEach(n => f[n]++)); return f;
-}
-function getLastAppearance(results) {
-  const l = {}; for (let i=1;i<=37;i++) l[i]=-1;
-  results.forEach((r,idx) => r.forEach(n => l[n]=idx)); return l;
-}
-function pickTopN(scores, n) {
-  return Object.entries(scores).sort((a,b)=>b[1]-a[1]).slice(0,n).map(([k])=>+k);
-}
-function shuffle(arr) {
-  const a=[...arr];
-  for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
-  return a;
-}
-
-const ALGORITHMS = {
-  hot:     { label:"🔥 ホット戦略",   desc:"直近10回で最も頻出の数字を優先",            color:"#ff6b35",
-    generate: r => { const f=analyzeRecency(r,10); return shuffle(pickTopN(f,14)).slice(0,7).sort((a,b)=>a-b); } },
-  cold:    { label:"❄️ コールド戦略", desc:"しばらく出ていない「そろそろ出る」数字を選択", color:"#4ecdc4",
-    generate: r => { const l=getLastAppearance(r),s={}; for(let i=1;i<=37;i++) s[i]=l[i]===-1?9999:r.length-1-l[i]; return shuffle(pickTopN(s,14)).slice(0,7).sort((a,b)=>a-b); } },
-  balance: { label:"⚖️ バランス戦略", desc:"全体頻度・直近頻度・間隔を組み合わせた総合スコア", color:"#a29bfe",
-    generate: r => { const o=analyzeFrequency(r),rc=analyzeRecency(r,10),l=getLastAppearance(r),s={},mx=r.length;
-      for(let i=1;i<=37;i++){const d=l[i]===-1?mx:r.length-1-l[i]; s[i]=o[i]*0.3+rc[i]*0.5+(d/mx)*mx*0.2;}
-      return shuffle(pickTopN(s,14)).slice(0,7).sort((a,b)=>a-b); } },
-  pattern: { label:"🔢 パターン戦略", desc:"奇数・偶数・数字帯のバランスを重視して選択", color:"#fd79a8",
-    generate: r => { const f=analyzeFrequency(r),bands=[[1,9],[10,18],[19,27],[28,37]],picks=[];
-      bands.forEach(([lo,hi])=>{ const b={}; for(let i=lo;i<=hi;i++) b[i]=f[i]; picks.push(shuffle(pickTopN(b,3))[0]); });
-      const rem=[];for(let i=1;i<=37;i++) if(!picks.includes(i)) rem.push(i);
-      shuffle(rem).slice(0,3).forEach(n=>picks.push(n)); return picks.sort((a,b)=>a-b); } },
-  quantum: { label:"⚛️ ランダム戦略", desc:"完全ランダム（どの戦略も結局はこれと同じ確率）", color:"#55efc4",
-    generate: () => shuffle(Array.from({length:37},(_,i)=>i+1)).slice(0,7).sort((a,b)=>a-b) },
+// ======== 等級判定ロジック ========
+// ロト7等級: 本数字7個・ボーナス数字2個で判定
+const judgeGrade = (myNums, winNums, bonusNums) => {
+  const mySet = new Set(myNums);
+  const main = winNums.filter(n => mySet.has(n)).length;
+  const bonus = bonusNums.filter(n => mySet.has(n)).length;
+  if (main === 7)                         return { grade: 1, label: "🏆 1等！", color: "text-yellow-300", bg: "from-yellow-900/80 to-amber-900/80 border-yellow-400" };
+  if (main === 6 && bonus >= 1)           return { grade: 2, label: "🥇 2等！", color: "text-orange-300", bg: "from-orange-900/80 to-red-900/80 border-orange-400" };
+  if (main === 6)                         return { grade: 3, label: "🥈 3等！", color: "text-orange-300", bg: "from-orange-900/60 to-amber-900/60 border-orange-500" };
+  if (main === 5 && bonus >= 1)           return { grade: 4, label: "🥉 4等！", color: "text-indigo-300", bg: "from-indigo-900/60 to-violet-900/60 border-indigo-400" };
+  if (main === 5)                         return { grade: 5, label: "✨ 5等！", color: "text-indigo-300", bg: "from-indigo-900/50 to-blue-900/50 border-indigo-500" };
+  if (main === 4)                         return { grade: 6, label: "🎉 6等！", color: "text-teal-300",   bg: "from-teal-900/50 to-emerald-900/50 border-teal-500" };
+  if (main === 3 || (main === 2 && bonus >= 1)) return { grade: 7, label: "🎊 7等！", color: "text-green-300", bg: "from-green-900/50 to-teal-900/50 border-green-600" };
+  return null;
 };
 
-// ══════════════════════════════════════════════════════
-// 状態
-// ══════════════════════════════════════════════════════
-let state = {
-  tab: "predict",
-  selectedAlgo: "balance",
-  prediction: null,
-  generating: false,
-  history: [],
-  showInstallBanner: !window.matchMedia("(display-mode: standalone)").matches,
-  freq: analyzeFrequency(PAST_RESULTS),
-};
-
-// ══════════════════════════════════════════════════════
-// レンダリング
-// ══════════════════════════════════════════════════════
-function ball(n, highlight, size="md") {
-  return `<div class="ball ball-${size}${highlight?" ball-highlight":""}">${n}</div>`;
-}
-
-function renderPredict() {
-  const algo = ALGORITHMS[state.selectedAlgo];
-  const installBanner = state.showInstallBanner ? `
-    <div class="install-banner">
-      <span style="font-size:1.5rem">📲</span>
-      <div class="install-banner-text">
-        <strong>iPhoneにインストールできます</strong>
-        Safariの共有ボタン →「ホーム画面に追加」でアプリとして使えます
-      </div>
-      <button class="install-close" onclick="dismissBanner()">✕</button>
-    </div>` : "";
-
-  const algoCards = Object.entries(ALGORITHMS).map(([k,a]) => {
-    const active = k===state.selectedAlgo;
-    const style = active
-      ? `border-color:${a.color};box-shadow:0 0 0 2px ${a.color}40;background:${a.color}18`
-      : "";
-    const labelColor = active ? a.color : "#dfe6e9";
-    return `<button class="algo-card" style="${style}" onclick="selectAlgo('${k}')">
-      <div class="algo-label" style="color:${labelColor}">${a.label}</div>
-      <div class="algo-desc">${a.desc}</div>
-    </button>`;
-  }).join("");
-
-  const resultCard = state.prediction && !state.generating ? `
-    <div class="result-card" style="border-color:${ALGORITHMS[state.prediction.algo].color}">
-      <div class="result-header">
-        <span>${ALGORITHMS[state.prediction.algo].label}</span>
-        <span class="result-time">${state.prediction.time}</span>
-      </div>
-      <div class="balls-row">
-        ${state.prediction.numbers.map(n=>ball(n,true,"lg")).join("")}
-      </div>
-      <p class="result-note">※ この番号はアルゴリズムによる提案です。ロト7は完全ランダム抽選のため、当選を保証するものではありません。</p>
-    </div>` : "";
-
-  const btnText = state.generating ? "⚙️ 分析中..." : "🎲 番号を予測する";
-  return `
-    ${installBanner}
-    <h2 class="section-title">戦略を選んでください</h2>
-    <div class="algo-grid">${algoCards}</div>
-    <button class="gen-btn" style="background:${algo.color}" onclick="generate()" ${state.generating?"disabled":""}>
-      ${btnText}
-    </button>
-    ${resultCard}`;
-}
-
-function renderStats() {
-  const maxFreq = Math.max(...Object.values(state.freq));
-  const sorted = Array.from({length:37},(_,i)=>i+1).sort((a,b)=>state.freq[b]-state.freq[a]);
-  const bars = sorted.map(n => {
-    const pct = Math.round((state.freq[n]/maxFreq)*100);
-    const sel = state.prediction?.numbers.includes(n);
-    const bg = sel
-      ? "linear-gradient(90deg,#a29bfe,#6c5ce7)"
-      : "linear-gradient(90deg,#636e72,#b2bec3)";
-    return `<div class="freq-row${sel?" freq-row-selected":""}">
-      <span class="freq-num">${String(n).padStart(2,"0")}</span>
-      <div class="freq-bar-wrap"><div class="freq-bar-fill" style="width:${pct}%;background:${bg}"></div></div>
-      <span class="freq-count">${state.freq[n]}回</span>
-    </div>`;
-  }).join("");
-
-  const total = Object.values(state.freq).reduce((a,b)=>a+b,0);
-  const avg = Math.round(total/37);
-  const zero = Object.values(state.freq).filter(v=>v===0).length;
-
-  return `
-    <h2 class="section-title">過去30回の出現頻度</h2>
-    <p class="section-sub">直近30回の当選番号に基づく集計（サンプルデータ）</p>
-    <div class="freq-list">${bars}</div>
-    <div class="stats-summary">
-      <div class="stat-box"><div class="stat-val">${maxFreq}</div><div class="stat-lbl">最高出現数</div></div>
-      <div class="stat-box"><div class="stat-val">${avg}</div><div class="stat-lbl">平均出現数</div></div>
-      <div class="stat-box"><div class="stat-val">${zero}</div><div class="stat-lbl">未出現数</div></div>
-    </div>`;
-}
-
-function renderHistory() {
-  const myHistory = state.history.length === 0
-    ? `<div class="empty-state"><div class="empty-icon">🎱</div><p>まだ予測がありません。<br>「予測」タブで番号を生成してください。</p></div>`
-    : state.history.map(h => `
-        <div class="history-card">
-          <div class="history-header">
-            <span style="color:${ALGORITHMS[h.algo].color}">${ALGORITHMS[h.algo].label}</span>
-            <span class="result-time">${h.time}</span>
-          </div>
-          <div class="balls-row balls-sm">${h.numbers.map(n=>ball(n,true,"sm")).join("")}</div>
-        </div>`).join("");
-
-  const pastRows = PAST_RESULTS.slice(-10).reverse().map((r,i) => `
-    <div class="history-card past">
-      <div class="history-header"><span class="past-label">第 ${PAST_RESULTS.length-i} 回</span></div>
-      <div class="balls-row balls-sm">${r.map(n=>ball(n,false,"sm")).join("")}</div>
-    </div>`).join("");
-
-  return `
-    <h2 class="section-title">予測履歴</h2>
-    <div class="history-list">${myHistory}</div>
-    <h2 class="section-title" style="margin-top:1.5rem">サンプル当選番号（直近10回）</h2>
-    <div class="history-list">${pastRows}</div>`;
-}
-
-function renderTabs() {
-  const tabs = [
-    { id:"predict", icon:"🎯", label:"予測" },
-    { id:"stats",   icon:"📊", label:"統計" },
-    { id:"history", icon:"📋", label:"履歴" },
-  ];
-  return tabs.map(t => `
-    <button class="tab${state.tab===t.id?" tab-active":""}" onclick="switchTab('${t.id}')">
-      <span class="tab-icon">${t.icon}</span>${t.label}
-    </button>`).join("");
-}
-
-function render() {
-  const content = state.tab==="predict" ? renderPredict()
-                : state.tab==="stats"   ? renderStats()
-                : renderHistory();
-  document.getElementById("main").innerHTML = `<div class="section">${content}</div>`;
-  document.getElementById("tabBar").innerHTML = renderTabs();
-}
-
-// ══════════════════════════════════════════════════════
-// アクション
-// ══════════════════════════════════════════════════════
-function switchTab(id) { state.tab=id; render(); }
-function selectAlgo(k) { state.selectedAlgo=k; render(); }
-function dismissBanner() { state.showInstallBanner=false; render(); }
-
-function generate() {
-  if (state.generating) return;
-  state.generating = true;
-  render();
-  setTimeout(() => {
-    const numbers = ALGORITHMS[state.selectedAlgo].generate(PAST_RESULTS);
-    const entry = { numbers, algo: state.selectedAlgo, time: new Date().toLocaleTimeString("ja-JP") };
-    state.prediction = entry;
-    state.history = [entry, ...state.history].slice(0, 10);
-    state.generating = false;
-    render();
-  }, 800);
-}
-
-// ══════════════════════════════════════════════════════
-// Service Worker 登録（PWA オフライン対応）
-// ══════════════════════════════════════════════════════
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js").catch(() => {});
+// ======== Claude API呼び出し ========
+const callClaude = async (prompt, systemPrompt) => {
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-6",
+      max_tokens: 1000,
+      system: systemPrompt || "You are a helpful assistant. Respond in Japanese.",
+      messages: [{ role: "user", content: prompt }],
+      tools: [{ type: "web_search_20250305", name: "web_search" }],
+    }),
   });
-}
+  const data = await response.json();
+  return data.content.filter(b => b.type === "text").map(b => b.text).join("\n");
+};
 
-// 初回レンダリング
-render();
-</script>
-</body>
-</html>
+// ======== 予想アルゴリズム群 ========
+const buildScoreMap = (historyData) => {
+  const score = {};
+  for (let i = 1; i <= 37; i++) score[i] = 0;
+  const total = historyData.length;
+  historyData.forEach((d, idx) => {
+    const weight = Math.exp(-idx / (total * 0.4));
+    d.numbers.forEach(n => { score[n] += weight; });
+  });
+  return score;
+};
+const getColdNumbers = (historyData, recentN = 8) => {
+  const recent = new Set(historyData.slice(0, recentN).flatMap(d => d.numbers));
+  const cold = [];
+  for (let i = 1; i <= 37; i++) if (!recent.has(i)) cold.push(i);
+  return cold;
+};
+const pickWithConsecutive = (pool, n) => {
+  const s = [...pool].sort(() => Math.random() - 0.5);
+  for (let i = 0; i < s.length - 1; i++) {
+    if (Math.abs(s[i] - s[i+1]) === 1) {
+      const pair = [s[i], s[i+1]];
+      return [...pair, ...s.filter(x => !pair.includes(x)).slice(0, n-2)].sort((a,b)=>a-b);
+    }
+  }
+  return s.slice(0, n).sort((a,b)=>a-b);
+};
+const rnd = (arr, n) => [...arr].sort(() => Math.random() - 0.5).slice(0, n).map(x => typeof x === "object" ? x.num : x);
+
+const predictHot = (h) => {
+  const s = Object.entries(buildScoreMap(h)).map(([n,v])=>({num:+n,score:v})).sort((a,b)=>b.score-a.score);
+  return [...rnd(s.slice(0,14),5),...rnd(s.slice(14),2)].sort((a,b)=>a-b);
+};
+const predictCold = (h) => {
+  const cold = getColdNumbers(h,10);
+  const s = Object.entries(buildScoreMap(h)).map(([n,v])=>({num:+n,score:v})).sort((a,b)=>b.score-a.score);
+  const hot = s.slice(0,10).map(x=>x.num);
+  const cp = rnd(cold.length>=3?cold:s.slice(-10).map(x=>x.num),3);
+  return [...cp,...rnd(hot.filter(n=>!cp.includes(n)),4)].sort((a,b)=>a-b);
+};
+const predictBalance = (h) => {
+  const s = Object.entries(buildScoreMap(h)).map(([n,v])=>({num:+n,score:v})).sort((a,b)=>b.score-a.score);
+  return [...rnd(s.slice(0,9),2),...rnd(s.slice(9,19),2),...rnd(s.slice(19,28),2),...rnd(s.slice(28),1)].sort((a,b)=>a-b);
+};
+const predictConsecutive = (h) => {
+  const s = Object.entries(buildScoreMap(h)).map(([n,v])=>({num:+n,score:v})).sort((a,b)=>b.score-a.score);
+  return pickWithConsecutive(s.slice(0,22).map(x=>x.num),7);
+};
+const generateAllSets = (h) => [
+  { label:"🔥 ホット重視",    tag:"high",    desc:"過去データで出現率の高い数字を中心に選出",           numbers: predictHot(h) },
+  { label:"❄️ リバウンド狙い", tag:"cold",    desc:"最近しばらく出ていない「そろそろ来る」数字を中心に", numbers: predictCold(h) },
+  { label:"⚖️ バランス型",    tag:"neutral", desc:"出現頻度の高・中・低をまんべんなく組み合わせ",       numbers: predictBalance(h) },
+  { label:"🔗 連続数字型",    tag:"predict", desc:"実際の抽選で多い隣接ペアを意図的に含むセット",       numbers: predictConsecutive(h) },
+];
+
+// ======== UIコンポーネント ========
+const Ball = ({ num, type = "main", size = "md", highlight = false }) => {
+  const sizeClass = size === "sm" ? "w-8 h-8 text-xs" : "w-11 h-11 text-sm";
+  const colors = {
+    main:    "from-indigo-500 to-blue-600",
+    bonus:   "from-rose-500 to-pink-600",
+    predict: "from-emerald-500 to-teal-600",
+    high:    "from-orange-500 to-amber-600",
+    cold:    "from-sky-500 to-blue-700",
+    neutral: "from-violet-400 to-purple-600",
+    hit:     "from-yellow-400 to-amber-500",
+  };
+  return (
+    <div className={`${sizeClass} rounded-full bg-gradient-to-br ${highlight ? colors.hit : (colors[type]||colors.main)} text-white font-bold flex items-center justify-center shadow-md transition-transform hover:scale-110 ${highlight ? "ring-2 ring-yellow-300 scale-110" : ""}`}>
+      {String(num).padStart(2,"0")}
+    </div>
+  );
+};
+
+const FreqBar = ({ num, count, max, rank, total }) => {
+  const pct = Math.round((count/max)*100);
+  const type = rank<=7?"high": rank>total*7/37*1.5?"cold":"neutral";
+  const barColor = type==="high"?"bg-orange-400":type==="cold"?"bg-slate-400":"bg-violet-400";
+  return (
+    <div className="flex items-center gap-2 mb-1">
+      <Ball num={num} type={type} size="sm"/>
+      <div className="flex-1 bg-slate-700 rounded-full h-2">
+        <div className={`h-2 rounded-full ${barColor}`} style={{width:`${pct}%`}}/>
+      </div>
+      <span className="text-xs text-slate-500 w-8 text-right">{Math.round(count)}回</span>
+    </div>
+  );
+};
+
+const AUTO_REFRESH_INTERVAL = 10 * 60 * 1000;
+
+export default function Loto7App() {
+  const [tab, setTab]               = useState("predict");
+  const [loading, setLoading]       = useState(false);
+  const [aiComment, setAiComment]   = useState("");
+  const [history, setHistory]       = useState(SEED_DATA);
+  const [fetchStatus, setFetchStatus] = useState("idle");
+  const [sets, setSets]             = useState([]);
+  const [savedSets, setSavedSets]   = useState(null);  // 永続保存した購入セット
+  const [winAlerts, setWinAlerts]   = useState([]);    // 当選アラート
+  const [checkedRound, setCheckedRound] = useState(null); // 最後に照合した回
+  const [lastUpdated, setLastUpdated]   = useState(null);
+  const [nextUpdateIn, setNextUpdateIn] = useState(null);
+  const hasFetched  = useRef(false);
+  const intervalRef = useRef(null);
+  const countdownRef = useRef(null);
+
+  // ---- ストレージ: 購入セット読み込み ----
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await window.storage.get("loto7_saved_sets");
+        if (r) setSavedSets(JSON.parse(r.value));
+      } catch(_) {}
+      try {
+        const r = await window.storage.get("loto7_checked_round");
+        if (r) setCheckedRound(JSON.parse(r.value));
+      } catch(_) {}
+    })();
+  }, []);
+
+  // ---- 購入セットを保存 ----
+  const saveSets = async (newSets) => {
+    setSavedSets(newSets);
+    try { await window.storage.set("loto7_saved_sets", JSON.stringify(newSets)); } catch(_) {}
+  };
+
+  // ---- 当選照合 ----
+  const checkWins = (currentHistory, currentSaved) => {
+    if (!currentSaved || currentSaved.length === 0) return;
+    const latest = currentHistory[0];
+    if (!latest) return;
+    // 既にチェック済みの回はスキップ
+    if (checkedRound === latest.round) return;
+
+    const alerts = [];
+    currentSaved.forEach((set, si) => {
+      const result = judgeGrade(set.numbers, latest.numbers, latest.bonus);
+      if (result) {
+        alerts.push({
+          setIdx: si,
+          setLabel: set.label,
+          setNumbers: set.numbers,
+          round: latest.round,
+          date: latest.date,
+          winNumbers: latest.numbers,
+          bonusNumbers: latest.bonus,
+          ...result,
+        });
+      }
+    });
+
+    setWinAlerts(alerts);
+    setCheckedRound(latest.round);
+    try { window.storage.set("loto7_checked_round", JSON.stringify(latest.round)); } catch(_) {}
+  };
+
+  // ---- 頻度マップ計算 ----
+  const freqMap = {};
+  for (let i = 1; i <= 37; i++) freqMap[i] = 0;
+  history.forEach(d => d.numbers.forEach(n => freqMap[n]++));
+  const maxFreq = Math.max(...Object.values(freqMap));
+  const sortedByFreq = Object.entries(freqMap)
+    .map(([n,c]) => ({num:+n, count:c})).sort((a,b)=>b.count-a.count);
+
+  // ---- みずほ銀行データ取得 ----
+  const fetchLatestData = async (savedSetsArg) => {
+    setFetchStatus("fetching");
+    try {
+      const result = await callClaude(
+        `みずほ銀行のロト7当選番号ページ（https://www.mizuhobank.co.jp/takarakuji/check/loto/loto7/index.html）を参照して、最新の当選番号（直近5回分）をJSONフォーマットで返してください。
+JSON以外の文字は一切含めないでください：
+[{"round":594,"date":"2026-06-13","numbers":[1,2,3,4,5,6,7],"bonus":[8,9]},...]
+本数字7個（昇順）とボーナス数字2個を含めてください。`,
+        "あなたはロト7の当選番号データを正確にJSON形式で返すアシスタントです。web_searchツールでみずほ銀行のサイトを検索して最新情報を取得してください。JSONのみを返し、説明文は含めないでください。"
+      );
+      const m = result.match(/\[[\s\S]*\]/);
+      if (m) {
+        const fetched = JSON.parse(m[0]);
+        if (Array.isArray(fetched) && fetched.length > 0) {
+          const merged = [...fetched, ...SEED_DATA];
+          const unique = merged.filter((v,i,a)=>a.findIndex(x=>x.round===v.round)===i).sort((a,b)=>b.round-a.round);
+          setHistory(unique);
+          setFetchStatus("done");
+          setLastUpdated(new Date());
+          setNextUpdateIn(AUTO_REFRESH_INTERVAL/1000);
+          // 取得完了後に当選照合
+          const ss = savedSetsArg !== undefined ? savedSetsArg : savedSets;
+          checkWins(unique, ss);
+          return;
+        }
+      }
+      setFetchStatus("error"); setLastUpdated(new Date());
+    } catch(e) { setFetchStatus("error"); setLastUpdated(new Date()); }
+  };
+
+  // ---- 起動時 & 定期更新 ----
+  useEffect(() => {
+    if (!hasFetched.current) {
+      hasFetched.current = true;
+      fetchLatestData(null);
+    }
+    intervalRef.current  = setInterval(() => fetchLatestData(null), AUTO_REFRESH_INTERVAL);
+    countdownRef.current = setInterval(() => {
+      setNextUpdateIn(p => p===null?null : p<=1 ? AUTO_REFRESH_INTERVAL/1000 : p-1);
+    }, 1000);
+    return () => { clearInterval(intervalRef.current); clearInterval(countdownRef.current); };
+  }, []);
+
+  // savedSetsが読み込まれた後に照合を走らせる
+  useEffect(() => {
+    if (savedSets && history.length > 0) checkWins(history, savedSets);
+  }, [savedSets]);
+
+  const formatCountdown = (s) => {
+    if (s===null) return "";
+    return `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`;
+  };
+
+  // ---- 予想生成 ----
+  const generatePrediction = async () => {
+    setLoading(true); setAiComment(""); setSets([]);
+    const generated = generateAllSets(history);
+    setSets(generated);
+
+    const recent3 = history.slice(0,3).map(d=>`第${d.round}回: [${d.numbers.join(",")}]`).join("、");
+    const desc = generated.map((s,i)=>`セット${i+1}(${s.label.replace(/[^\w\s]/g,"").trim()}): [${s.numbers.join(",")}] — ${s.desc}`).join("\n");
+    try {
+      const c = await callClaude(
+        `ロト7の予想番号を4セット生成しました。\n直近3回の当選番号: ${recent3}\n---\n${desc}\n---\n各セットの特徴と狙い目を、セットごとに1〜2文で日本語で解説してください。\n形式: 「セット1: ～ / セット2: ～ / セット3: ～ / セット4: ～」`,
+        "あなたはロト7の統計アドバイザーです。各予想セットの特徴を端的に日本語で解説してください。宝くじは確率ゲームなので当選保証はありません。"
+      );
+      setAiComment(c);
+    } catch(e) { setAiComment("4種類のアルゴリズムで予想セットを生成しました。"); }
+    setLoading(false);
+  };
+
+  // ---- このセットで購入登録 ----
+  const registerSets = () => {
+    if (sets.length === 0) return;
+    saveSets(sets);
+    setWinAlerts([]);
+    setCheckedRound(null);
+    try { window.storage.set("loto7_checked_round", JSON.stringify(null)); } catch(_) {}
+    alert("✅ 4セットを購入番号として登録しました！\n次回抽選後に自動で当選チェックします。");
+  };
+
+  const latestRound = history[0];
+
+  const tagColors = {
+    high:    "from-orange-900/50 to-amber-900/50 border-orange-500/40",
+    cold:    "from-sky-900/50 to-slate-900/50 border-sky-500/30",
+    neutral: "from-violet-900/50 to-indigo-900/50 border-violet-500/40",
+    predict: "from-emerald-900/50 to-teal-900/50 border-emerald-500/40",
+  };
+  const tagText = { high:"text-orange-400", cold:"text-sky-400", neutral:"text-violet-400", predict:"text-emerald-400" };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white font-sans">
+
+      {/* ヘッダー */}
+      <div className="relative overflow-hidden">
+        <div className="absolute inset-0 opacity-10">
+          {[...Array(37)].map((_,i)=>(
+            <div key={i} className="absolute rounded-full bg-white text-slate-900 text-xs font-bold flex items-center justify-center"
+              style={{width:28,height:28,left:`${(i*2.7)%100}%`,top:`${(i*11)%100}%`,opacity:0.3+(i%3)*0.2}}>
+              {i+1}
+            </div>
+          ))}
+        </div>
+        <div className="relative px-4 pt-8 pb-4 text-center">
+          <div className="text-4xl mb-1">🎯</div>
+          <h1 className="text-2xl font-black tracking-tight">LOTO7 <span className="text-indigo-300">予想アプリ</span></h1>
+          <p className="text-slate-400 text-xs mt-1">みずほ銀行データ連携 × AI分析 × 当選自動チェック</p>
+        </div>
+      </div>
+
+      {/* ===== 当選アラートバナー ===== */}
+      {winAlerts.length > 0 && (
+        <div className="mx-4 mb-4 space-y-2">
+          {winAlerts.map((a, i) => (
+            <div key={i} className={`rounded-xl p-4 border bg-gradient-to-br ${a.bg} animate-pulse`}>
+              <div className="flex items-center gap-2 mb-2">
+                <span className={`text-lg font-black ${a.color}`}>{a.label}</span>
+                <span className="text-xs text-slate-300">第{a.round}回 ({a.date})</span>
+              </div>
+              <p className="text-xs text-slate-300 mb-2">{a.setLabel} が当選！</p>
+              <div className="flex flex-wrap gap-1.5 mb-1">
+                {a.setNumbers.map(n => (
+                  <Ball key={n} num={n} size="sm"
+                    type={a.winNumbers.includes(n) ? "hit" : a.bonusNumbers.includes(n) ? "bonus" : "main"}
+                    highlight={a.winNumbers.includes(n)}
+                  />
+                ))}
+              </div>
+              <p className="text-xs text-slate-400 mt-1">黄色 = 本数字一致</p>
+            </div>
+          ))}
+          <button onClick={()=>setWinAlerts([])} className="w-full text-xs text-slate-500 py-1">閉じる</button>
+        </div>
+      )}
+
+      {/* データ取得バナー */}
+      <div className="mx-4 mb-4 bg-slate-800/60 border border-indigo-500/30 rounded-xl p-3">
+        <div className="flex items-center justify-between">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <p className="text-xs text-slate-400">データソース</p>
+              {fetchStatus!=="fetching" && nextUpdateIn!==null && (
+                <span className="text-xs bg-indigo-900/60 text-indigo-300 px-1.5 py-0.5 rounded font-mono">
+                  🔄 {formatCountdown(nextUpdateIn)}
+                </span>
+              )}
+            </div>
+            <p className="text-sm font-semibold text-indigo-300">みずほ銀行 ロト7当選番号</p>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {fetchStatus==="fetching" ? "⏳ データ取得中..."
+                : fetchStatus==="error"   ? `⚠️ 取得失敗（内蔵データ使用）${lastUpdated?" · "+lastUpdated.toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"}):""}`
+                : fetchStatus==="done"    ? `✅ ${history.length}回分 · ${lastUpdated?lastUpdated.toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"})+" 更新":""}`
+                : `📊 初回取得中... (${history.length}回分)`}
+            </p>
+          </div>
+          <button onClick={()=>{setNextUpdateIn(AUTO_REFRESH_INTERVAL/1000); fetchLatestData(savedSets);}}
+            disabled={fetchStatus==="fetching"}
+            className="ml-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-bold px-3 py-2 rounded-lg transition-colors shrink-0">
+            {fetchStatus==="fetching" ? <span className="animate-spin inline-block">⚙️</span> : "🔄"}
+          </button>
+        </div>
+        {fetchStatus!=="fetching" && nextUpdateIn!==null && (
+          <div className="mt-2 bg-slate-700/50 rounded-full h-1">
+            <div className="h-1 rounded-full bg-indigo-500 transition-all duration-1000"
+              style={{width:`${((AUTO_REFRESH_INTERVAL/1000-nextUpdateIn)/(AUTO_REFRESH_INTERVAL/1000))*100}%`}}/>
+          </div>
+        )}
+      </div>
+
+      {/* タブ */}
+      <div className="mx-4 mb-4 grid grid-cols-4 gap-1 bg-slate-800/50 rounded-xl p-1">
+        {[
+          {id:"predict", label:"🎯 予想"},
+          {id:"mysets",  label:"📌 購入"},
+          {id:"history", label:"📋 履歴"},
+          {id:"stats",   label:"📊 統計"},
+        ].map(t=>(
+          <button key={t.id} onClick={()=>setTab(t.id)}
+            className={`py-2 rounded-lg text-xs font-bold transition-all ${tab===t.id?"bg-indigo-600 text-white shadow-lg":"text-slate-400 hover:text-white"}`}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ===== 予想タブ ===== */}
+      {tab==="predict" && (
+        <div className="px-4 space-y-4">
+          {latestRound && (
+            <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4">
+              <p className="text-xs text-slate-400 mb-2">第{latestRound.round}回 当選番号 ({latestRound.date})</p>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {latestRound.numbers.map(n=><Ball key={n} num={n} type="main"/>)}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-rose-400 font-bold">B</span>
+                {latestRound.bonus.map(n=><Ball key={n} num={n} type="bonus" size="sm"/>)}
+              </div>
+            </div>
+          )}
+
+          <button onClick={generatePrediction} disabled={loading}
+            className="w-full py-4 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 disabled:opacity-60 rounded-xl font-black text-lg tracking-wide shadow-lg shadow-indigo-900/50 transition-all active:scale-95">
+            {loading
+              ? <span className="flex items-center justify-center gap-2"><span className="animate-spin text-xl">⚙️</span> AI分析中...</span>
+              : "✨ 予想番号を生成する"}
+          </button>
+
+          {sets.length > 0 && (
+            <div className="space-y-3">
+              <p className="text-xs text-slate-400 text-center">── 4種アルゴリズムによる予想 ──</p>
+              {sets.map((set,idx)=>(
+                <div key={idx} className={`rounded-xl p-4 border bg-gradient-to-br ${tagColors[set.tag]}`}>
+                  <div className="flex items-start justify-between mb-1">
+                    <p className={`text-xs font-bold ${tagText[set.tag]}`}>{set.label}</p>
+                    <span className="text-xs text-slate-600">セット {idx+1}</span>
+                  </div>
+                  <p className="text-xs text-slate-500 mb-3">{set.desc}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {set.numbers.map(n=><Ball key={n} num={n} type={set.tag}/>)}
+                  </div>
+                </div>
+              ))}
+
+              {aiComment && (
+                <div className="bg-amber-900/20 border border-amber-500/30 rounded-xl p-4">
+                  <p className="text-xs text-amber-400 font-bold mb-1">🤖 AI総合解説</p>
+                  <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-line">{aiComment}</p>
+                </div>
+              )}
+
+              {/* 購入登録ボタン */}
+              <button onClick={registerSets}
+                className="w-full py-3 bg-gradient-to-r from-emerald-700 to-teal-700 hover:from-emerald-600 hover:to-teal-600 rounded-xl font-bold text-sm shadow-lg transition-all active:scale-95">
+                📌 この4セットを購入番号として登録する
+              </button>
+              <p className="text-center text-xs text-slate-600 pb-1">登録すると毎回の抽選後に自動で当選チェックします</p>
+              <p className="text-center text-xs text-slate-600 pb-2">※予想は統計分析に基づくものです。当選を保証するものではありません。</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ===== 購入セットタブ ===== */}
+      {tab==="mysets" && (
+        <div className="px-4 space-y-4">
+          {savedSets ? (
+            <>
+              <div className="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-3">
+                <p className="text-xs text-emerald-400 font-bold mb-1">📌 登録中の購入セット</p>
+                <p className="text-xs text-slate-400">抽選結果が更新されると自動で当選チェックします</p>
+              </div>
+              {savedSets.map((set,idx)=>(
+                <div key={idx} className={`rounded-xl p-4 border bg-gradient-to-br ${tagColors[set.tag]}`}>
+                  <div className="flex items-start justify-between mb-1">
+                    <p className={`text-xs font-bold ${tagText[set.tag]}`}>{set.label}</p>
+                    <span className="text-xs text-slate-600">セット {idx+1}</span>
+                  </div>
+                  <p className="text-xs text-slate-500 mb-3">{set.desc}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {set.numbers.map(n=>{
+                      const isHit = latestRound?.numbers.includes(n);
+                      return <Ball key={n} num={n} type={set.tag} highlight={isHit}/>;
+                    })}
+                  </div>
+                  {latestRound && (
+                    <p className="text-xs text-slate-500 mt-2">
+                      最新回(第{latestRound.round}回)との一致: {set.numbers.filter(n=>latestRound.numbers.includes(n)).length}個
+                      {set.numbers.filter(n=>latestRound.bonus.includes(n)).length>0
+                        ? ` + ボーナス${set.numbers.filter(n=>latestRound.bonus.includes(n)).length}個` : ""}
+                    </p>
+                  )}
+                </div>
+              ))}
+              <button onClick={()=>{
+                  if(confirm("登録を解除しますか？")) {
+                    setSavedSets(null); setWinAlerts([]);
+                    try { window.storage.delete("loto7_saved_sets"); } catch(_) {}
+                  }
+                }}
+                className="w-full py-2 bg-slate-700/50 hover:bg-slate-600/50 rounded-xl text-xs text-slate-400 transition-colors">
+                🗑️ 登録解除
+              </button>
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-16 text-slate-500 space-y-3">
+              <span className="text-4xl">📌</span>
+              <p className="text-sm">購入セットが登録されていません</p>
+              <p className="text-xs text-slate-600">「予想」タブで番号を生成して登録してください</p>
+              <button onClick={()=>setTab("predict")}
+                className="mt-2 px-4 py-2 bg-indigo-700 rounded-lg text-sm font-bold hover:bg-indigo-600 text-white">
+                予想を生成する →
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ===== 履歴タブ ===== */}
+      {tab==="history" && (
+        <div className="px-4 space-y-3">
+          <p className="text-xs text-slate-400">過去{history.length}回分の当選番号</p>
+          {history.map(d=>(
+            <div key={d.round} className="bg-slate-800/50 border border-slate-700/40 rounded-xl p-3">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-xs font-bold text-indigo-300">第{d.round}回</span>
+                <span className="text-xs text-slate-500">{d.date}</span>
+              </div>
+              <div className="flex flex-wrap gap-1.5 mb-1">
+                {d.numbers.map(n=><Ball key={n} num={n} type="main" size="sm"/>)}
+              </div>
+              <div className="flex items-center gap-1.5 mt-1">
+                <span className="text-xs text-rose-400 font-bold">B</span>
+                {d.bonus.map(n=><Ball key={n} num={n} type="bonus" size="sm"/>)}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ===== 統計タブ ===== */}
+      {tab==="stats" && (
+        <div className="px-4 space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-orange-900/30 border border-orange-500/30 rounded-xl p-3">
+              <p className="text-xs text-orange-400 mb-2">🔥 よく出る TOP5</p>
+              <div className="flex flex-wrap gap-1.5">
+                {sortedByFreq.slice(0,5).map(x=><Ball key={x.num} num={x.num} type="high" size="sm"/>)}
+              </div>
+            </div>
+            <div className="bg-slate-800/50 border border-slate-600/30 rounded-xl p-3">
+              <p className="text-xs text-slate-400 mb-2">❄️ 出にくい TOP5</p>
+              <div className="flex flex-wrap gap-1.5">
+                {sortedByFreq.slice(-5).reverse().map(x=><Ball key={x.num} num={x.num} type="cold" size="sm"/>)}
+              </div>
+            </div>
+          </div>
+          <div className="bg-slate-800/50 border border-slate-700/40 rounded-xl p-4">
+            <p className="text-xs text-slate-400 mb-3">📊 出現頻度ランキング（全37数字）</p>
+            <div className="space-y-1">
+              {sortedByFreq.map((x,i)=>(
+                <FreqBar key={x.num} num={x.num} count={x.count} max={maxFreq} rank={i+1} total={history.length}/>
+              ))}
+            </div>
+          </div>
+          <div className="bg-slate-800/50 border border-slate-700/40 rounded-xl p-4">
+            <p className="text-xs text-slate-400 mb-2">📈 分析サマリー</p>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-slate-400">分析対象回数</span>
+                <span className="font-bold text-indigo-300">{history.length}回</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">最高頻出番号</span>
+                <span className="font-bold text-orange-400">{sortedByFreq[0]?.num}番 ({sortedByFreq[0]?.count}回)</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">最低頻出番号</span>
+                <span className="font-bold text-slate-400">{sortedByFreq[36]?.num}番 ({sortedByFreq[36]?.count}回)</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">平均出現回数</span>
+                <span className="font-bold text-violet-400">{(history.length*7/37).toFixed(1)}回</span>
+              </div>
+            </div>
+          </div>
+          <p className="text-center text-xs text-slate-600 pb-4">※ロト7は完全ランダム抽選です。統計は参考情報です。</p>
+        </div>
+      )}
+
+      <div className="h-8"/>
+    </div>
+  );
+}
