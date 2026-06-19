@@ -5,10 +5,18 @@ import json
 import time
 from datetime import datetime
 
+# より本物に近いブラウザヘッダー
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "Accept-Language": "ja,en-US;q=0.7,en;q=0.3",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+    "Accept-Language": "ja-JP,ja;q=0.9,en-US;q=0.8,en;q=0.7",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Connection": "keep-alive",
+    "Upgrade-Insecure-Requests": "1",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "none",
+    "Referer": "https://www.mizuhobank.co.jp/takarakuji/check/loto/backnumber/index.html",
 }
 
 # 既知の実データ
@@ -39,151 +47,108 @@ KNOWN_DATA = [
 ]
 
 def load_existing_data():
-    """既存のdata.jsonを読み込む"""
     try:
         with open("data.json", "r", encoding="utf-8") as f:
             data = json.load(f)
-            print(f"✅ 既存data.json読み込み: {len(data)}件")
+            print(f"✅ 既存data.json: {len(data)}件")
             return {d["round"]: d for d in data}
     except:
         print("📋 data.jsonなし → 既知データで初期化")
         return {d["round"]: d for d in KNOWN_DATA}
 
-def parse_loto7_page(html):
-    """みずほ銀行のロト7ページからデータを解析"""
+def parse_page(html):
+    """ページからロト7データを解析"""
     soup = BeautifulSoup(html, "html.parser")
     results = {}
 
-    # テーブルから取得
     tables = soup.find_all("table")
     for table in tables:
         rows = table.find_all("tr")
         for row in rows:
-            cells = [c.get_text(strip=True) for c in row.find_all(["td","th"])]
-            if not cells:
+            cells = row.find_all(["td", "th"])
+            if len(cells) < 9:
                 continue
-            full = " ".join(cells)
 
-            # 回号を探す
-            round_m = re.search(r'第\s*(\d+)\s*回', full)
+            texts = [c.get_text(strip=True) for c in cells]
+
+            # 回号
+            round_m = re.search(r'第\s*(\d+)\s*回', texts[0])
             if not round_m:
                 continue
 
-            # 日付を探す
-            date_m = re.search(r'(\d{4})[年/](\d{1,2})[月/](\d{1,2})日?', full)
+            # 日付
+            date_m = re.search(r'(\d{4})年(\d{1,2})月(\d{1,2})日', texts[1])
             if not date_m:
                 continue
 
-            # 数字を探す（1〜37の範囲）
-            nums = []
-            for cell in cells:
-                cell_nums = re.findall(r'\b(\d{1,2})\b', cell)
-                for n in cell_nums:
-                    n = int(n)
-                    if 1 <= n <= 37:
-                        nums.append(n)
+            # 本数字（3〜9列目）とボーナス数字（10〜11列目）
+            try:
+                nums = []
+                for t in texts[2:]:
+                    m = re.match(r'^(\d{1,2})$', t)
+                    if m:
+                        n = int(m.group(1))
+                        if 1 <= n <= 37:
+                            nums.append(n)
 
-            if len(nums) >= 9:
-                try:
+                if len(nums) >= 9:
                     rn = int(round_m.group(1))
                     dt = f"{date_m.group(1)}-{int(date_m.group(2)):02d}-{int(date_m.group(3)):02d}"
-                    # 重複を除去して最初の9個
-                    unique_nums = []
-                    seen = set()
-                    for n in nums:
-                        if n not in seen:
-                            unique_nums.append(n)
-                            seen.add(n)
-                        if len(unique_nums) == 9:
-                            break
-
-                    if len(unique_nums) >= 9:
-                        results[rn] = {
-                            "round": rn,
-                            "date": dt,
-                            "numbers": sorted(unique_nums[:7]),
-                            "bonus": sorted(unique_nums[7:9])
-                        }
-                except:
-                    pass
+                    results[rn] = {
+                        "round": rn,
+                        "date": dt,
+                        "numbers": sorted(nums[:7]),
+                        "bonus": sorted(nums[7:9])
+                    }
+            except:
+                continue
 
     return results
 
-def fetch_backnumber_page(from_round, to_round):
-    """みずほ銀行の過去当選番号ページを取得"""
-    url = f"https://www.mizuhobank.co.jp/takarakuji/check/loto/backnumber/detail.html?fromto={from_round}_{to_round}&type=loto7"
+def fetch_page(from_r, to_r, session):
+    """1ページ分取得"""
+    url = f"https://www.mizuhobank.co.jp/takarakuji/check/loto/backnumber/detail.html?fromto={from_r}_{to_r}&type=loto7"
     try:
-        res = requests.get(url, headers=HEADERS, timeout=20)
+        res = session.get(url, timeout=20)
         if res.status_code == 200:
             res.encoding = "utf-8"
-            data = parse_loto7_page(res.text)
+            data = parse_page(res.text)
             if data:
-                print(f"✅ 第{from_round}〜{to_round}回: {len(data)}件取得")
+                print(f"✅ 第{from_r}〜{to_r}回: {len(data)}件")
             else:
-                print(f"⚠️ 第{from_round}〜{to_round}回: データ解析失敗")
+                print(f"⚠️ 第{from_r}〜{to_r}回: データ解析失敗")
             return data
         else:
-            print(f"⚠️ 第{from_round}〜{to_round}回: HTTP {res.status_code}")
+            print(f"⚠️ 第{from_r}〜{to_r}回: HTTP {res.status_code}")
             return {}
     except Exception as e:
-        print(f"⚠️ 第{from_round}〜{to_round}回: {e}")
+        print(f"⚠️ 第{from_r}〜{to_r}回: {e}")
         return {}
 
-def fetch_latest():
-    """最新の当選番号を取得"""
+def fetch_latest(session):
+    """最新データ取得"""
     url = "https://www.mizuhobank.co.jp/takarakuji/check/loto/loto7/index.html"
     try:
-        res = requests.get(url, headers=HEADERS, timeout=20)
+        res = session.get(url, timeout=20)
         if res.status_code == 200:
             res.encoding = "utf-8"
-            data = parse_loto7_page(res.text)
-            if data:
-                print(f"✅ 最新データ: {len(data)}件取得")
+            data = parse_page(res.text)
+            print(f"✅ 最新: {len(data)}件")
             return data
         else:
-            print(f"⚠️ 最新データ: HTTP {res.status_code}")
+            print(f"⚠️ 最新: HTTP {res.status_code}")
             return {}
     except Exception as e:
-        print(f"⚠️ 最新データ取得失敗: {e}")
+        print(f"⚠️ 最新取得失敗: {e}")
         return {}
 
-def fetch_all_historical(existing, latest_round):
-    """全過去データを20回ずつ取得"""
-    all_data = {}
-    
-    # 20回ずつのブロックで取得（みずほ銀行のURLパターン）
-    # 第1回〜第681回を20回ずつ
-    step = 20
-    for start in range(1, latest_round + 1, step):
-        end = min(start + step - 1, latest_round)
-        
-        # 既存データが揃っているブロックはスキップ
-        block_rounds = set(range(start, end + 1))
-        existing_rounds = set(existing.keys())
-        missing = block_rounds - existing_rounds
-        
-        if not missing:
-            print(f"⏭️ 第{start}〜{end}回: 既存データあり、スキップ")
-            continue
-        
-        data = fetch_backnumber_page(start, end)
-        all_data.update(data)
-        
-        if data:
-            time.sleep(1)  # サーバー負荷軽減
-
-    return all_data
-
 def save_data(merged):
-    """data.jsonとindex.htmlを更新"""
     sorted_data = sorted(merged.values(), key=lambda x: x["round"], reverse=True)
-    
-    # data.jsonを保存
+
     with open("data.json", "w", encoding="utf-8") as f:
         json.dump(sorted_data, f, ensure_ascii=False, indent=2)
-    print(f"✅ data.json保存: {len(sorted_data)}件")
+    print(f"✅ data.json: {len(sorted_data)}件保存")
 
-    # index.htmlのSEED_DATAを最新50件に更新
     try:
         with open("index.html", "r", encoding="utf-8") as f:
             html = f.read()
@@ -198,40 +163,63 @@ def save_data(merged):
 
         with open("index.html", "w", encoding="utf-8") as f:
             f.write(new_html)
-        print(f"✅ index.html更新: 最新{len(recent)}件をSEED_DATAに設定")
+        print(f"✅ index.html: 最新{len(recent)}件更新")
     except Exception as e:
         print(f"⚠️ index.html更新失敗: {e}")
 
     latest = sorted_data[0]
-    print(f"\n📊 最終結果:")
-    print(f"   総件数: {len(sorted_data)}件")
-    print(f"   最新: 第{latest['round']}回 ({latest['date']})")
-    print(f"   最古: 第{sorted_data[-1]['round']}回 ({sorted_data[-1]['date']})")
+    print(f"\n📊 結果: {len(sorted_data)}件 / 最新:第{latest['round']}回 / 最古:第{sorted_data[-1]['round']}回")
 
 if __name__ == "__main__":
     print("=" * 50)
-    print("ロト7 全当選番号データ取得開始")
+    print("ロト7 全当選番号データ取得")
     print("=" * 50)
 
-    # 既存データ読み込み
     merged = load_existing_data()
-    print(f"既存: {len(merged)}件")
 
-    # 最新データ取得
-    print("\n--- 最新データ取得 ---")
-    latest = fetch_latest()
+    # セッションを使ってCookieを維持
+    session = requests.Session()
+    session.headers.update(HEADERS)
+
+    # まずトップページにアクセスしてCookieを取得
+    try:
+        top = session.get("https://www.mizuhobank.co.jp/takarakuji/check/loto/backnumber/index.html", timeout=15)
+        print(f"トップページ: HTTP {top.status_code}")
+        time.sleep(1)
+    except:
+        pass
+
+    # 最新データ
+    print("\n--- 最新データ ---")
+    latest = fetch_latest(session)
     merged.update(latest)
 
-    # 最新回号を確認
     latest_round = max(merged.keys()) if merged else 681
-    print(f"最新回号: 第{latest_round}回")
+    print(f"最新回: 第{latest_round}回")
 
-    # 過去データ取得
-    print("\n--- 過去データ取得 ---")
-    historical = fetch_all_historical(merged, latest_round)
-    merged.update(historical)
+    # 過去データ（20回ずつ）
+    print("\n--- 過去データ ---")
+    success_count = 0
+    for start in range(1, latest_round + 1, 20):
+        end = min(start + 19, latest_round)
+        block = set(range(start, end + 1))
+        missing = block - set(merged.keys())
+
+        if not missing:
+            print(f"⏭️ 第{start}〜{end}回: スキップ")
+            continue
+
+        data = fetch_page(start, end, session)
+        if data:
+            merged.update(data)
+            success_count += 1
+            time.sleep(1.5)
+        else:
+            time.sleep(0.5)
+
+    print(f"\n取得成功: {success_count}ブロック")
 
     # 保存
-    print("\n--- データ保存 ---")
+    print("\n--- 保存 ---")
     save_data(merged)
     print("\n✅ 完了！")
