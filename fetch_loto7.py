@@ -5,7 +5,13 @@ import json
 import time
 from datetime import datetime
 
-# 既知の実データ（アプリのSEED_DATAから）
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "ja,en-US;q=0.7,en;q=0.3",
+}
+
+# 既知の実データ
 KNOWN_DATA = [
     {"round":681,"date":"2026-06-12","numbers":[1,10,12,13,19,33,35],"bonus":[14,37]},
     {"round":680,"date":"2026-06-05","numbers":[9,10,22,26,27,31,36],"bonus":[20,29]},
@@ -32,8 +38,6 @@ KNOWN_DATA = [
     {"round":659,"date":"2026-01-09","numbers":[2,8,9,14,27,34,36],"bonus":[5,18]},
 ]
 
-HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
-
 def load_existing_data():
     """既存のdata.jsonを読み込む"""
     try:
@@ -42,148 +46,132 @@ def load_existing_data():
             print(f"✅ 既存data.json読み込み: {len(data)}件")
             return {d["round"]: d for d in data}
     except:
-        print("📋 data.jsonなし → 新規作成")
+        print("📋 data.jsonなし → 既知データで初期化")
         return {d["round"]: d for d in KNOWN_DATA}
 
-def fetch_from_mizuho_latest():
-    """みずほ銀行から最新数回分を取得"""
-    url = "https://www.mizuhobank.co.jp/takarakuji/check/loto/loto7/index.html"
-    try:
-        res = requests.get(url, headers=HEADERS, timeout=15)
-        res.encoding = "utf-8"
-        soup = BeautifulSoup(res.text, "html.parser")
-        text = soup.get_text()
+def parse_loto7_page(html):
+    """みずほ銀行のロト7ページからデータを解析"""
+    soup = BeautifulSoup(html, "html.parser")
+    results = {}
 
-        results = {}
-        # 回号・日付・番号を探す
-        blocks = re.findall(
-            r'第(\d+)回.*?(\d{4})年(\d{1,2})月(\d{1,2})日.*?'
-            r'((?:\d{1,2}[\s,、・]+){6}\d{1,2}).*?'
-            r'((?:\d{1,2}[\s,、・]+){1}\d{1,2})',
-            text, re.DOTALL
-        )
+    # テーブルから取得
+    tables = soup.find_all("table")
+    for table in tables:
+        rows = table.find_all("tr")
+        for row in rows:
+            cells = [c.get_text(strip=True) for c in row.find_all(["td","th"])]
+            if not cells:
+                continue
+            full = " ".join(cells)
 
-        # シンプルな方法：テーブルから取得
-        tables = soup.find_all("table")
-        for table in tables:
-            rows = table.find_all("tr")
-            for row in rows:
-                cells = [c.get_text(strip=True) for c in row.find_all(["td","th"])]
-                full = " ".join(cells)
-                round_m = re.search(r'第(\d+)回', full)
-                date_m = re.search(r'(\d{4})年(\d{1,2})月(\d{1,2})日', full)
-                if round_m and date_m:
-                    nums = re.findall(r'\b([1-9]|[12]\d|3[0-7])\b', full)
-                    if len(nums) >= 9:
-                        try:
-                            rn = int(round_m.group(1))
-                            dt = f"{date_m.group(1)}-{int(date_m.group(2)):02d}-{int(date_m.group(3)):02d}"
-                            all_n = [int(n) for n in nums[:9]]
-                            results[rn] = {
-                                "round": rn,
-                                "date": dt,
-                                "numbers": sorted(all_n[:7]),
-                                "bonus": sorted(all_n[7:9])
-                            }
-                        except:
-                            pass
+            # 回号を探す
+            round_m = re.search(r'第\s*(\d+)\s*回', full)
+            if not round_m:
+                continue
 
-        if results:
-            print(f"✅ みずほ銀行から{len(results)}件取得")
-        else:
-            print("⚠️ みずほ銀行: テーブル取得失敗、テキスト解析を試みます")
-            # テキスト全体から解析
-            round_matches = re.finditer(r'第(\d+)回', text)
-            for m in round_matches:
-                rn = int(m.group(1))
-                pos = m.start()
-                chunk = text[pos:pos+200]
-                date_m = re.search(r'(\d{4})年(\d{1,2})月(\d{1,2})日', chunk)
-                nums = re.findall(r'\b([1-9]|[12]\d|3[0-7])\b', chunk)
-                if date_m and len(nums) >= 9:
-                    try:
-                        dt = f"{date_m.group(1)}-{int(date_m.group(2)):02d}-{int(date_m.group(3)):02d}"
-                        all_n = [int(n) for n in nums[:9]]
+            # 日付を探す
+            date_m = re.search(r'(\d{4})[年/](\d{1,2})[月/](\d{1,2})日?', full)
+            if not date_m:
+                continue
+
+            # 数字を探す（1〜37の範囲）
+            nums = []
+            for cell in cells:
+                cell_nums = re.findall(r'\b(\d{1,2})\b', cell)
+                for n in cell_nums:
+                    n = int(n)
+                    if 1 <= n <= 37:
+                        nums.append(n)
+
+            if len(nums) >= 9:
+                try:
+                    rn = int(round_m.group(1))
+                    dt = f"{date_m.group(1)}-{int(date_m.group(2)):02d}-{int(date_m.group(3)):02d}"
+                    # 重複を除去して最初の9個
+                    unique_nums = []
+                    seen = set()
+                    for n in nums:
+                        if n not in seen:
+                            unique_nums.append(n)
+                            seen.add(n)
+                        if len(unique_nums) == 9:
+                            break
+
+                    if len(unique_nums) >= 9:
                         results[rn] = {
                             "round": rn,
                             "date": dt,
-                            "numbers": sorted(all_n[:7]),
-                            "bonus": sorted(all_n[7:9])
+                            "numbers": sorted(unique_nums[:7]),
+                            "bonus": sorted(unique_nums[7:9])
                         }
-                    except:
-                        pass
-            if results:
-                print(f"✅ テキスト解析で{len(results)}件取得")
+                except:
+                    pass
 
-        return results
+    return results
+
+def fetch_backnumber_page(from_round, to_round):
+    """みずほ銀行の過去当選番号ページを取得"""
+    url = f"https://www.mizuhobank.co.jp/takarakuji/check/loto/backnumber/detail.html?fromto={from_round}_{to_round}&type=loto7"
+    try:
+        res = requests.get(url, headers=HEADERS, timeout=20)
+        if res.status_code == 200:
+            res.encoding = "utf-8"
+            data = parse_loto7_page(res.text)
+            if data:
+                print(f"✅ 第{from_round}〜{to_round}回: {len(data)}件取得")
+            else:
+                print(f"⚠️ 第{from_round}〜{to_round}回: データ解析失敗")
+            return data
+        else:
+            print(f"⚠️ 第{from_round}〜{to_round}回: HTTP {res.status_code}")
+            return {}
     except Exception as e:
-        print(f"⚠️ みずほ銀行取得失敗: {e}")
+        print(f"⚠️ 第{from_round}〜{to_round}回: {e}")
         return {}
 
-def fetch_historical_data(existing_rounds):
-    """過去データを年別ページから取得"""
+def fetch_latest():
+    """最新の当選番号を取得"""
+    url = "https://www.mizuhobank.co.jp/takarakuji/check/loto/loto7/index.html"
+    try:
+        res = requests.get(url, headers=HEADERS, timeout=20)
+        if res.status_code == 200:
+            res.encoding = "utf-8"
+            data = parse_loto7_page(res.text)
+            if data:
+                print(f"✅ 最新データ: {len(data)}件取得")
+            return data
+        else:
+            print(f"⚠️ 最新データ: HTTP {res.status_code}")
+            return {}
+    except Exception as e:
+        print(f"⚠️ 最新データ取得失敗: {e}")
+        return {}
+
+def fetch_all_historical(existing, latest_round):
+    """全過去データを20回ずつ取得"""
     all_data = {}
     
-    # みずほ銀行の年別ページ
-    base_url = "https://www.mizuhobank.co.jp/takarakuji/check/loto/loto7/loto7_{year}.html"
-    
-    # 2013年〜2026年
-    for year in range(2013, 2027):
-        # その年のデータが既にあるかチェック
-        year_str = str(year)
-        existing_year = [r for r in existing_rounds if str(existing_rounds[r].get("date","")).startswith(year_str)]
+    # 20回ずつのブロックで取得（みずほ銀行のURLパターン）
+    # 第1回〜第681回を20回ずつ
+    step = 20
+    for start in range(1, latest_round + 1, step):
+        end = min(start + step - 1, latest_round)
         
-        if year < 2026 and len(existing_year) >= 40:
-            print(f"⏭️ {year}年: 既存データ{len(existing_year)}件あり、スキップ")
+        # 既存データが揃っているブロックはスキップ
+        block_rounds = set(range(start, end + 1))
+        existing_rounds = set(existing.keys())
+        missing = block_rounds - existing_rounds
+        
+        if not missing:
+            print(f"⏭️ 第{start}〜{end}回: 既存データあり、スキップ")
             continue
-
-        url = base_url.format(year=year)
-        try:
-            res = requests.get(url, headers=HEADERS, timeout=15)
-            if res.status_code != 200:
-                print(f"⚠️ {year}年: HTTP {res.status_code}")
-                continue
-            
-            res.encoding = "utf-8"
-            soup = BeautifulSoup(res.text, "html.parser")
-            text = soup.get_text()
-            
-            year_data = {}
-            tables = soup.find_all("table")
-            for table in tables:
-                rows = table.find_all("tr")
-                for row in rows:
-                    cells = [c.get_text(strip=True) for c in row.find_all(["td","th"])]
-                    full = " ".join(cells)
-                    round_m = re.search(r'第(\d+)回', full)
-                    date_m = re.search(r'(\d{4})年(\d{1,2})月(\d{1,2})日', full)
-                    if round_m and date_m:
-                        nums = re.findall(r'\b([1-9]|[12]\d|3[0-7])\b', full)
-                        if len(nums) >= 9:
-                            try:
-                                rn = int(round_m.group(1))
-                                dt = f"{date_m.group(1)}-{int(date_m.group(2)):02d}-{int(date_m.group(3)):02d}"
-                                all_n = [int(n) for n in nums[:9]]
-                                year_data[rn] = {
-                                    "round": rn,
-                                    "date": dt,
-                                    "numbers": sorted(all_n[:7]),
-                                    "bonus": sorted(all_n[7:9])
-                                }
-                            except:
-                                pass
-
-            if year_data:
-                print(f"✅ {year}年: {len(year_data)}件取得")
-                all_data.update(year_data)
-            else:
-                print(f"⚠️ {year}年: データなし")
-            
+        
+        data = fetch_backnumber_page(start, end)
+        all_data.update(data)
+        
+        if data:
             time.sleep(1)  # サーバー負荷軽減
-            
-        except Exception as e:
-            print(f"⚠️ {year}年取得失敗: {e}")
-    
+
     return all_data
 
 def save_data(merged):
@@ -195,30 +183,22 @@ def save_data(merged):
         json.dump(sorted_data, f, ensure_ascii=False, indent=2)
     print(f"✅ data.json保存: {len(sorted_data)}件")
 
-    # index.htmlのSEED_DATAを最新50件に更新（アプリ起動時はdata.jsonから全件読み込む）
+    # index.htmlのSEED_DATAを最新50件に更新
     try:
         with open("index.html", "r", encoding="utf-8") as f:
             html = f.read()
 
-        recent_50 = sorted_data[:50]
-        data_str = json.dumps(recent_50, ensure_ascii=False)
+        recent = sorted_data[:50]
+        data_str = json.dumps(recent, ensure_ascii=False)
         new_html = re.sub(
             r'const SEED_DATA = \[[\s\S]*?\];',
             f'const SEED_DATA = {data_str};',
             html, count=1
         )
 
-        # data.jsonのURLを設定（GitHub Pages）
-        data_json_url = "https://ogachan111.github.io/loto7/data.json"
-        if 'const DATA_JSON_URL' not in new_html:
-            new_html = new_html.replace(
-                'const SEED_DATA',
-                f'const DATA_JSON_URL = "{data_json_url}";\nconst SEED_DATA'
-            )
-
         with open("index.html", "w", encoding="utf-8") as f:
             f.write(new_html)
-        print(f"✅ index.html更新: 最新{len(recent_50)}件をSEED_DATAに設定")
+        print(f"✅ index.html更新: 最新{len(recent)}件をSEED_DATAに設定")
     except Exception as e:
         print(f"⚠️ index.html更新失敗: {e}")
 
@@ -237,14 +217,18 @@ if __name__ == "__main__":
     merged = load_existing_data()
     print(f"既存: {len(merged)}件")
 
-    # 最新データ取得（みずほ銀行）
+    # 最新データ取得
     print("\n--- 最新データ取得 ---")
-    latest = fetch_from_mizuho_latest()
+    latest = fetch_latest()
     merged.update(latest)
 
-    # 過去データ取得（年別ページ）
+    # 最新回号を確認
+    latest_round = max(merged.keys()) if merged else 681
+    print(f"最新回号: 第{latest_round}回")
+
+    # 過去データ取得
     print("\n--- 過去データ取得 ---")
-    historical = fetch_historical_data(merged)
+    historical = fetch_all_historical(merged, latest_round)
     merged.update(historical)
 
     # 保存
