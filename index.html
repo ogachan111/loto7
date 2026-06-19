@@ -20,15 +20,11 @@
   <style>
     * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
     body { margin: 0; background: #0f0e1a; overscroll-behavior: none; }
-    /* iOS safe area */
     .safe-top    { padding-top:    env(safe-area-inset-top,    16px); }
     .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 16px); }
-    /* スムーズスクロール */
     .scroll-area { overflow-y: auto; -webkit-overflow-scrolling: touch; }
-    /* ボトムナビ固定 */
     .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0;
                   padding-bottom: env(safe-area-inset-bottom, 0px); z-index: 50; }
-    /* アニメーション */
     @keyframes pulse-slow { 0%,100%{opacity:1} 50%{opacity:.6} }
     .pulse-slow { animation: pulse-slow 2s infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
@@ -41,30 +37,31 @@
 <div id="root"></div>
 
 <script type="text/babel">
-const { useState, useEffect, useRef } = React;
+const { useState, useEffect, useRef, useMemo } = React;
 
-// ── ストレージ（localStorage fallback） ──
+// ── ストレージ ──
 const store = {
   get: (k) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch(_){return null;} },
   set: (k,v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch(_){} },
   del: (k)   => { try { localStorage.removeItem(k); } catch(_){} },
 };
 
-// ── 過去データ（実際の当選番号） ──
+// ── 定数 ──
 const DATA_JSON_URL = "https://ogachan111.github.io/loto7/data.json";
-const SEED_DATA = [{"round": 681, "date": "2026-06-12", "numbers": [1, 10, 12, 13, 19, 33, 35], "bonus": [14, 37]}, {"round": 680, "date": "2026-06-05", "numbers": [9, 10, 22, 26, 27, 31, 36], "bonus": [20, 29]}, {"round": 679, "date": "2026-05-29", "numbers": [6, 8, 9, 18, 22, 24, 35], "bonus": [4, 20]}, {"round": 678, "date": "2026-05-22", "numbers": [2, 6, 12, 15, 24, 26, 34], "bonus": [18, 20]}, {"round": 677, "date": "2026-05-15", "numbers": [5, 6, 7, 8, 15, 17, 19], "bonus": [1, 33]}, {"round": 676, "date": "2026-05-08", "numbers": [2, 6, 15, 19, 20, 22, 27], "bonus": [31, 33]}, {"round": 675, "date": "2026-05-01", "numbers": [5, 8, 16, 18, 24, 28, 31], "bonus": [6, 23]}, {"round": 674, "date": "2026-04-24", "numbers": [1, 6, 7, 9, 12, 22, 26], "bonus": [8, 14]}, {"round": 673, "date": "2026-04-17", "numbers": [6, 9, 10, 12, 16, 24, 32], "bonus": [17, 19]}, {"round": 672, "date": "2026-04-10", "numbers": [7, 11, 15, 16, 17, 24, 33], "bonus": [6, 9]}, {"round": 671, "date": "2026-04-03", "numbers": [7, 13, 16, 22, 28, 33, 36], "bonus": [2, 25]}, {"round": 670, "date": "2026-03-27", "numbers": [3, 4, 9, 10, 18, 21, 37], "bonus": [15, 23]}, {"round": 669, "date": "2026-03-20", "numbers": [3, 5, 6, 7, 9, 13, 16], "bonus": [11, 23]}, {"round": 668, "date": "2026-03-13", "numbers": [1, 8, 11, 14, 18, 22, 29], "bonus": [19, 35]}, {"round": 667, "date": "2026-03-06", "numbers": [9, 13, 20, 22, 28, 29, 33], "bonus": [21, 23]}, {"round": 666, "date": "2026-02-27", "numbers": [2, 17, 18, 22, 23, 25, 33], "bonus": [16, 34]}, {"round": 665, "date": "2026-02-20", "numbers": [6, 8, 14, 19, 22, 25, 35], "bonus": [12, 17]}, {"round": 664, "date": "2026-02-13", "numbers": [3, 6, 8, 14, 21, 22, 31], "bonus": [17, 37]}, {"round": 663, "date": "2026-02-06", "numbers": [4, 6, 10, 11, 13, 17, 23], "bonus": [25, 32]}, {"round": 662, "date": "2026-01-30", "numbers": [4, 14, 15, 21, 22, 24, 37], "bonus": [5, 20]}, {"round": 661, "date": "2026-01-23", "numbers": [7, 12, 17, 22, 31, 34, 35], "bonus": [20, 32]}, {"round": 660, "date": "2026-01-16", "numbers": [4, 6, 12, 13, 16, 17, 31], "bonus": [14, 20]}, {"round": 659, "date": "2026-01-09", "numbers": [2, 8, 9, 14, 27, 34, 36], "bonus": [5, 18]}];
+const SEED_DATA = [{"round":682,"date":"2026-06-19","numbers":[11,14,17,23,28,30,36],"bonus":[12,20]},{"round":681,"date":"2026-06-12","numbers":[1,10,12,13,19,33,35],"bonus":[14,37]},{"round":680,"date":"2026-06-05","numbers":[9,10,22,26,27,31,36],"bonus":[20,29]},{"round":679,"date":"2026-05-29","numbers":[6,8,9,18,22,24,35],"bonus":[4,20]},{"round":678,"date":"2026-05-22","numbers":[2,6,12,15,24,26,34],"bonus":[18,20]},{"round":677,"date":"2026-05-15","numbers":[5,6,7,8,15,17,19],"bonus":[1,33]},{"round":676,"date":"2026-05-08","numbers":[2,6,15,19,20,22,27],"bonus":[31,33]},{"round":675,"date":"2026-05-01","numbers":[5,8,16,18,24,28,31],"bonus":[6,23]},{"round":674,"date":"2026-04-24","numbers":[1,6,7,9,12,22,26],"bonus":[8,14]},{"round":673,"date":"2026-04-17","numbers":[6,9,10,12,16,24,32],"bonus":[17,19]},{"round":672,"date":"2026-04-10","numbers":[7,11,15,16,17,24,33],"bonus":[6,9]},{"round":671,"date":"2026-04-03","numbers":[7,13,16,22,28,33,36],"bonus":[2,25]},{"round":670,"date":"2026-03-27","numbers":[3,4,9,10,18,21,37],"bonus":[15,23]},{"round":669,"date":"2026-03-20","numbers":[3,5,6,7,9,13,16],"bonus":[11,23]},{"round":668,"date":"2026-03-13","numbers":[1,8,11,14,18,22,29],"bonus":[19,35]},{"round":667,"date":"2026-03-06","numbers":[9,13,20,22,28,29,33],"bonus":[21,23]},{"round":666,"date":"2026-02-27","numbers":[2,17,18,22,23,25,33],"bonus":[16,34]},{"round":665,"date":"2026-02-20","numbers":[6,8,14,19,22,25,35],"bonus":[12,17]},{"round":664,"date":"2026-02-13","numbers":[3,6,8,14,21,22,31],"bonus":[17,37]},{"round":663,"date":"2026-02-06","numbers":[4,6,10,11,13,17,23],"bonus":[25,32]},{"round":662,"date":"2026-01-30","numbers":[4,14,15,21,22,24,37],"bonus":[5,20]},{"round":661,"date":"2026-01-23","numbers":[7,12,17,22,31,34,35],"bonus":[20,32]},{"round":660,"date":"2026-01-16","numbers":[4,6,12,13,16,17,31],"bonus":[14,20]},{"round":659,"date":"2026-01-09","numbers":[2,8,9,14,27,34,36],"bonus":[5,18]}];
+const AUTO_MS = 10*60*1000;
 
 // ── 等級判定 ──
 const judgeGrade = (my, win, bon) => {
   const s = new Set(my);
   const m = win.filter(n=>s.has(n)).length;
   const b = bon.filter(n=>s.has(n)).length;
-  if(m===7)              return {grade:1,label:"🏆 1等！",color:"#fde047",bg:"#78350f"};
-  if(m===6&&b>=1)        return {grade:2,label:"🥇 2等！",color:"#fb923c",bg:"#7c2d12"};
-  if(m===6)              return {grade:3,label:"🥈 3等！",color:"#fb923c",bg:"#7c2d12"};
-  if(m===5&&b>=1)        return {grade:4,label:"🥉 4等！",color:"#a5b4fc",bg:"#312e81"};
-  if(m===5)              return {grade:5,label:"✨ 5等！",color:"#a5b4fc",bg:"#312e81"};
-  if(m===4)              return {grade:6,label:"🎉 6等！",color:"#5eead4",bg:"#134e4a"};
+  if(m===7)               return {grade:1,label:"🏆 1等！",color:"#fde047",bg:"#78350f"};
+  if(m===6&&b>=1)         return {grade:2,label:"🥇 2等！",color:"#fb923c",bg:"#7c2d12"};
+  if(m===6)               return {grade:3,label:"🥈 3等！",color:"#fb923c",bg:"#7c2d12"};
+  if(m===5&&b>=1)         return {grade:4,label:"🥉 4等！",color:"#a5b4fc",bg:"#312e81"};
+  if(m===5)               return {grade:5,label:"✨ 5等！",color:"#a5b4fc",bg:"#312e81"};
+  if(m===4)               return {grade:6,label:"🎉 6等！",color:"#5eead4",bg:"#134e4a"};
   if(m===3||(m===2&&b>=1))return{grade:7,label:"🎊 7等！",color:"#86efac",bg:"#14532d"};
   return null;
 };
@@ -84,36 +81,88 @@ const callClaude = async (prompt, sys) => {
   return d.content.filter(b=>b.type==="text").map(b=>b.text).join("\n");
 };
 
-// ── 予想アルゴリズム ──
-const scoreMap = (h) => {
-  const s={}; for(let i=1;i<=37;i++) s[i]=0;
-  h.forEach((d,i)=>{ const w=Math.exp(-i/(h.length*0.4)); d.numbers.forEach(n=>{s[n]+=w;}); });
-  return s;
-};
-const coldNums = (h,n=8) => {
-  const r=new Set(h.slice(0,n).flatMap(d=>d.numbers)); const c=[];
-  for(let i=1;i<=37;i++) if(!r.has(i)) c.push(i); return c;
-};
-const rnd=(a,n)=>[...a].sort(()=>Math.random()-.5).slice(0,n).map(x=>typeof x==="object"?x.num:x);
-const withConsec=(pool,n)=>{
-  const s=[...pool].sort(()=>Math.random()-.5);
-  for(let i=0;i<s.length-1;i++){
-    if(Math.abs(s[i]-s[i+1])===1){
-      const p=[s[i],s[i+1]];
-      return [...p,...s.filter(x=>!p.includes(x)).slice(0,n-2)].sort((a,b)=>a-b);
+// ── 統計計算（682件対応・重み付きスコア） ──
+const calcStats = (history) => {
+  const n = history.length;
+  // 全期間頻度
+  const freq = {}; for(let i=1;i<=37;i++) freq[i]=0;
+  history.forEach(d=>d.numbers.forEach(n=>freq[n]++));
+
+  // 重み付きスコア（直近ほど重視）
+  const score = {}; for(let i=1;i<=37;i++) score[i]=0;
+  history.forEach((d,i)=>{
+    const w = Math.exp(-i/(n*0.4));
+    d.numbers.forEach(n=>{ score[n]+=w; });
+  });
+
+  // 直近20回の出現数字
+  const recent20 = new Set(history.slice(0,20).flatMap(d=>d.numbers));
+  // 直近5回の出現数字
+  const recent5  = new Set(history.slice(0,5).flatMap(d=>d.numbers));
+
+  // ボーナス数字頻度
+  const bonusFreq = {}; for(let i=1;i<=37;i++) bonusFreq[i]=0;
+  history.forEach(d=>d.bonus.forEach(n=>bonusFreq[n]++));
+
+  // 連続ペア出現頻度
+  const pairFreq = {};
+  history.forEach(d=>{
+    const nums = [...d.numbers].sort((a,b)=>a-b);
+    for(let i=0;i<nums.length-1;i++){
+      if(nums[i+1]-nums[i]===1){
+        const key=`${nums[i]}-${nums[i+1]}`;
+        pairFreq[key]=(pairFreq[key]||0)+1;
+      }
     }
-  }
-  return s.slice(0,n).sort((a,b)=>a-b);
+  });
+
+  return { freq, score, recent20, recent5, bonusFreq, pairFreq, n };
 };
-const predictHot=(h)=>{const s=Object.entries(scoreMap(h)).map(([n,v])=>({num:+n,score:v})).sort((a,b)=>b.score-a.score);return[...rnd(s.slice(0,14),5),...rnd(s.slice(14),2)].sort((a,b)=>a-b);};
-const predictCold=(h)=>{const cold=coldNums(h,10);const s=Object.entries(scoreMap(h)).map(([n,v])=>({num:+n,score:v})).sort((a,b)=>b.score-a.score);const hot=s.slice(0,10).map(x=>x.num);const cp=rnd(cold.length>=3?cold:s.slice(-10).map(x=>x.num),3);return[...cp,...rnd(hot.filter(n=>!cp.includes(n)),4)].sort((a,b)=>a-b);};
-const predictBal=(h)=>{const s=Object.entries(scoreMap(h)).map(([n,v])=>({num:+n,score:v})).sort((a,b)=>b.score-a.score);return[...rnd(s.slice(0,9),2),...rnd(s.slice(9,19),2),...rnd(s.slice(19,28),2),...rnd(s.slice(28),1)].sort((a,b)=>a-b);};
-const predictCon=(h)=>{const s=Object.entries(scoreMap(h)).map(([n,v])=>({num:+n,score:v})).sort((a,b)=>b.score-a.score);return withConsec(s.slice(0,22).map(x=>x.num),7);};
-const genSets=(h)=>[
-  {label:"🔥 ホット重視",   tag:"hot",  desc:"頻出数字を中心に選出",           numbers:predictHot(h)},
-  {label:"❄️ リバウンド",   tag:"cold", desc:"最近出ていない数字を中心に",      numbers:predictCold(h)},
-  {label:"⚖️ バランス型",   tag:"bal",  desc:"頻度帯を均等サンプリング",        numbers:predictBal(h)},
-  {label:"🔗 連続数字型",   tag:"con",  desc:"隣接ペアを意図的に含む",          numbers:predictCon(h)},
+
+// ── 予想アルゴリズム（682件対応） ──
+const rnd = (arr, n) => [...arr].sort(()=>Math.random()-.5).slice(0,n);
+
+const predictHot = (stats) => {
+  const sorted = Object.entries(stats.score).map(([n,v])=>({num:+n,score:v})).sort((a,b)=>b.score-a.score);
+  return [...rnd(sorted.slice(0,14),5),...rnd(sorted.slice(14),2)].map(x=>x.num).sort((a,b)=>a-b);
+};
+
+const predictCold = (stats) => {
+  // 直近20回に出ていない数字 = コールド
+  const cold = Array.from({length:37},(_,i)=>i+1).filter(n=>!stats.recent20.has(n));
+  const hot = Object.entries(stats.score).map(([n,v])=>({num:+n,score:v})).sort((a,b)=>b.score-a.score).slice(0,12).map(x=>x.num);
+  const cp = rnd(cold.length>=3?cold:Array.from({length:37},(_,i)=>i+1).filter(n=>!stats.recent5.has(n)),3);
+  return [...cp,...rnd(hot.filter(n=>!cp.includes(n)),4)].sort((a,b)=>a-b);
+};
+
+const predictBal = (stats) => {
+  const sorted = Object.entries(stats.score).map(([n,v])=>({num:+n,score:v})).sort((a,b)=>b.score-a.score);
+  // 4分割してバランスよくサンプリング
+  return [
+    ...rnd(sorted.slice(0,9),2),
+    ...rnd(sorted.slice(9,19),2),
+    ...rnd(sorted.slice(19,28),2),
+    ...rnd(sorted.slice(28),1),
+  ].map(x=>x.num).sort((a,b)=>a-b);
+};
+
+const predictCon = (stats) => {
+  // 頻出連続ペアを優先
+  const topPairs = Object.entries(stats.pairFreq).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const pairNums = topPairs.length>0
+    ? topPairs[0][0].split("-").map(Number)
+    : [];
+  const sorted = Object.entries(stats.score).map(([n,v])=>({num:+n,score:v})).sort((a,b)=>b.score-a.score).map(x=>x.num);
+  const used = new Set(pairNums);
+  const rest = rnd(sorted.filter(n=>!used.has(n)), 5);
+  return [...pairNums,...rest].sort((a,b)=>a-b).slice(0,7);
+};
+
+const genSets = (stats) => [
+  {label:"🔥 ホット重視",   tag:"hot",  desc:`直近${stats.n}回の頻出数字を重み付き選出`,          numbers:predictHot(stats)},
+  {label:"❄️ リバウンド",   tag:"cold", desc:`直近20回未出現(${37-stats.recent20.size}個)から厳選`, numbers:predictCold(stats)},
+  {label:"⚖️ バランス型",   tag:"bal",  desc:"頻度帯を4分割して均等サンプリング",                  numbers:predictBal(stats)},
+  {label:"🔗 連続数字型",   tag:"con",  desc:"歴史的頻出連続ペアを軸に構成",                       numbers:predictCon(stats)},
 ];
 
 // ── Ball コンポーネント ──
@@ -140,39 +189,33 @@ const Ball = ({num, type="main", sm=false, hl=false}) => (
   </div>
 );
 
-const TAG_BG = {
-  hot:"rgba(120,53,15,.45)", cold:"rgba(12,74,110,.45)",
-  bal:"rgba(46,16,101,.45)", con:"rgba(6,78,59,.45)",
-};
-const TAG_BORDER = {
-  hot:"rgba(249,115,22,.4)", cold:"rgba(14,165,233,.3)",
-  bal:"rgba(139,92,246,.4)", con:"rgba(16,185,129,.4)",
-};
-const TAG_COLOR = {hot:"#fb923c",cold:"#38bdf8",bal:"#c4b5fd",con:"#6ee7b7"};
-
-const AUTO_MS = 10*60*1000;
+const TAG_BG     = {hot:"rgba(120,53,15,.45)",cold:"rgba(12,74,110,.45)",bal:"rgba(46,16,101,.45)",con:"rgba(6,78,59,.45)"};
+const TAG_BORDER = {hot:"rgba(249,115,22,.4)",cold:"rgba(14,165,233,.3)",bal:"rgba(139,92,246,.4)",con:"rgba(16,185,129,.4)"};
+const TAG_COLOR  = {hot:"#fb923c",cold:"#38bdf8",bal:"#c4b5fd",con:"#6ee7b7"};
 
 function App() {
-  const [tab,setTab]         = useState("predict");
+  const [tab,setTab]       = useState("predict");
   const [loading,setLoading] = useState(false);
-  const [aiMsg,setAiMsg]     = useState("");
+  const [aiMsg,setAiMsg]   = useState("");
   const [history,setHistory] = useState(SEED_DATA);
+  const [dataLoaded,setDataLoaded] = useState(false); // data.json読込済みか
   const [fetchSt,setFetchSt] = useState("idle");
-  const [sets,setSets]       = useState([]);
-  const [saved,setSaved]     = useState(()=>store.get("loto7_saved"));
-  const [alerts,setAlerts]   = useState([]);
+  const [sets,setSets]     = useState([]);
+  const [saved,setSaved]   = useState(()=>store.get("loto7_saved"));
+  const [alerts,setAlerts] = useState([]);
   const [checkedRound,setCheckedRound] = useState(()=>store.get("loto7_checked"));
-  const [lastUp,setLastUp]   = useState(null);
+  const [lastUp,setLastUp] = useState(null);
   const [countdown,setCountdown] = useState(null);
   const fetched = useRef(false);
-  const intv  = useRef(null);
-  const cntdwn= useRef(null);
+  const intv    = useRef(null);
+  const cntdwn  = useRef(null);
 
-  // 頻度マップ
-  const freq={}; for(let i=1;i<=37;i++) freq[i]=0;
-  history.forEach(d=>d.numbers.forEach(n=>freq[n]++));
-  const maxF = Math.max(...Object.values(freq));
-  const byFreq = Object.entries(freq).map(([n,c])=>({num:+n,count:c})).sort((a,b)=>b.count-a.count);
+  // 統計計算（682件対応）
+  const stats = useMemo(()=>calcStats(history),[history]);
+  const byFreq = useMemo(()=>
+    Object.entries(stats.freq).map(([n,c])=>({num:+n,count:c})).sort((a,b)=>b.count-a.count),
+  [stats]);
+  const maxF = byFreq[0]?.count || 1;
 
   // 当選照合
   const checkWins = (hist, sv) => {
@@ -182,40 +225,75 @@ function App() {
     const al=[];
     sv.forEach((s,si)=>{
       const res=judgeGrade(s.numbers,latest.numbers,latest.bonus);
-      if(res) al.push({...res, si, setLabel:s.label, setNums:s.numbers,
-        round:latest.round, date:latest.date,
-        winNums:latest.numbers, bonNums:latest.bonus});
+      if(res) al.push({...res,si,setLabel:s.label,setNums:s.numbers,
+        round:latest.round,date:latest.date,winNums:latest.numbers,bonNums:latest.bonus});
     });
     setAlerts(al);
     setCheckedRound(latest.round);
-    store.set("loto7_checked", latest.round);
+    store.set("loto7_checked",latest.round);
   };
 
-  // データ取得
-  const fetchData = async (sv) => {
+  // ① data.jsonを読み込む（682件）
+  const loadDataJson = async () => {
+    try {
+      const res = await fetch(DATA_JSON_URL + "?t=" + Date.now());
+      if(!res.ok) throw new Error("fetch failed");
+      const data = await res.json();
+      if(Array.isArray(data) && data.length > 0){
+        // SEED_DATAとマージして重複除去
+        const merged = [...data, ...SEED_DATA]
+          .filter((v,i,a)=>a.findIndex(x=>x.round===v.round)===i)
+          .sort((a,b)=>b.round-a.round);
+        setHistory(merged);
+        setDataLoaded(true);
+        setLastUp(new Date());
+        return merged;
+      }
+    } catch(e){
+      console.warn("data.json読込失敗:", e);
+    }
+    return null;
+  };
+
+  // ② みずほ銀行から最新データを取得
+  const fetchLatest = async (sv, hist) => {
     setFetchSt("fetching");
     try {
       const res = await callClaude(
-        `みずほ銀行のロト7当選番号ページ（https://www.mizuhobank.co.jp/takarakuji/check/loto/loto7/index.html）を参照して最新の当選番号（直近5回分）をJSON配列で返してください。JSON以外不要：[{"round":594,"date":"2026-06-13","numbers":[1,2,3,4,5,6,7],"bonus":[8,9]},...]`,
+        `みずほ銀行のロト7当選番号ページ（https://www.mizuhobank.co.jp/takarakuji/check/loto/loto7/index.html）を参照して最新の当選番号（直近3回分）をJSON配列で返してください。JSON以外不要：[{"round":682,"date":"2026-06-19","numbers":[1,2,3,4,5,6,7],"bonus":[8,9]},...]`,
         "あなたはロト7当選番号データをJSON形式で返すAIです。web_searchで検索してJSONのみ返してください。"
       );
-      const m=res.match(/\[[\s\S]*\]/);
+      const m = res.match(/\[[\s\S]*?\]/);
       if(m){
-        const fetched=JSON.parse(m[0]);
-        if(Array.isArray(fetched)&&fetched.length){
-          const merged=[...fetched,...SEED_DATA].filter((v,i,a)=>a.findIndex(x=>x.round===v.round)===i).sort((a,b)=>b.round-a.round);
-          setHistory(merged); setFetchSt("done"); setLastUp(new Date()); setCountdown(AUTO_MS/1000);
+        const fetched = JSON.parse(m[0]);
+        if(Array.isArray(fetched) && fetched.length){
+          const base = hist || history;
+          const merged = [...fetched, ...base]
+            .filter((v,i,a)=>a.findIndex(x=>x.round===v.round)===i)
+            .sort((a,b)=>b.round-a.round);
+          setHistory(merged);
+          setFetchSt("done");
+          setLastUp(new Date());
+          setCountdown(AUTO_MS/1000);
           checkWins(merged, sv!==undefined?sv:saved);
           return;
         }
       }
       setFetchSt("error"); setLastUp(new Date());
-    } catch(_){ setFetchSt("error"); setLastUp(new Date()); }
+    } catch(_){
+      setFetchSt("error"); setLastUp(new Date());
+    }
   };
 
   useEffect(()=>{
-    if(!fetched.current){ fetched.current=true; fetchData(saved); }
-    intv.current   = setInterval(()=>fetchData(null), AUTO_MS);
+    if(!fetched.current){
+      fetched.current = true;
+      // まずdata.jsonを読み込んでから最新データを取得
+      loadDataJson().then(hist => {
+        fetchLatest(saved, hist);
+      });
+    }
+    intv.current   = setInterval(()=>fetchLatest(null, null), AUTO_MS);
     cntdwn.current = setInterval(()=>setCountdown(p=>p===null?null:p<=1?AUTO_MS/1000:p-1),1000);
     return()=>{ clearInterval(intv.current); clearInterval(cntdwn.current); };
   },[]);
@@ -227,16 +305,18 @@ function App() {
   // 予想生成
   const generate = async () => {
     setLoading(true); setAiMsg(""); setSets([]);
-    const g=genSets(history); setSets(g);
-    const r3=history.slice(0,3).map(d=>`第${d.round}回:[${d.numbers.join(",")}]`).join("、");
-    const desc=g.map((s,i)=>`セット${i+1}(${s.label.replace(/[^\w\s]/g,"").trim()}):[${s.numbers.join(",")}]`).join("\n");
+    const g = genSets(stats); setSets(g);
+    const r3 = history.slice(0,3).map(d=>`第${d.round}回:[${d.numbers.join(",")}]`).join("、");
+    const desc = g.map((s,i)=>`セット${i+1}(${s.label.replace(/[^\w\s]/g,"").trim()}):[${s.numbers.join(",")}]`).join("\n");
+    const topHot = byFreq.slice(0,5).map(x=>`${x.num}番(${x.count}回)`).join(",");
+    const topCold = byFreq.slice(-5).map(x=>`${x.num}番(${x.count}回)`).join(",");
     try {
-      const c=await callClaude(
-        `ロト7予想4セット生成。直近3回:${r3}\n${desc}\n各セット1〜2文で日本語解説。形式:セット1:〜/セット2:〜/セット3:〜/セット4:〜`,
-        "ロト7統計アドバイザー。端的に日本語で。当選保証なし。"
+      const c = await callClaude(
+        `ロト7予想4セット生成。分析対象:${stats.n}回分。直近3回:${r3}\n頻出TOP5:${topHot}\n低頻度TOP5:${topCold}\n${desc}\n各セット1〜2文で日本語解説。形式:セット1:〜/セット2:〜/セット3:〜/セット4:〜`,
+        `ロト7統計アドバイザー。${stats.n}回分のデータを分析して端的に日本語で。当選保証なし。`
       );
       setAiMsg(c);
-    } catch(_){ setAiMsg("4種アルゴリズムで予想セットを生成しました。"); }
+    } catch(_){ setAiMsg(`${stats.n}回分の統計データを基に4種アルゴリズムで予想セットを生成しました。`); }
     setLoading(false);
   };
 
@@ -249,7 +329,6 @@ function App() {
 
   const latest = history[0];
 
-  // ── レンダリング ──
   const tabs=[
     {id:"predict",icon:"🎯",label:"予想"},
     {id:"mysets", icon:"📌",label:"購入"},
@@ -260,17 +339,19 @@ function App() {
   return (
     <div style={{minHeight:"100vh",background:"linear-gradient(160deg,#0f0e1a 0%,#1e1b4b 50%,#0f0e1a 100%)",color:"#f1f5f9",fontFamily:"-apple-system,sans-serif",paddingBottom:80}}>
 
-      {/* ── ヘッダー ── */}
+      {/* ヘッダー */}
       <div className="safe-top" style={{background:"rgba(30,27,75,.85)",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)",borderBottom:"1px solid rgba(99,102,241,.25)",padding:"12px 16px 12px"}}>
         <div style={{textAlign:"center"}}>
           <div style={{fontSize:28,lineHeight:1}}>🎯</div>
           <h1 style={{margin:"4px 0 0",fontSize:18,fontWeight:900,letterSpacing:"-0.02em"}}>LOTO7 <span style={{color:"#a5b4fc"}}>予想アプリ</span></h1>
-          <p style={{margin:"2px 0 0",fontSize:11,color:"#64748b"}}>みずほ銀行データ連携 × AI分析 × 当選自動チェック</p>
+          <p style={{margin:"2px 0 0",fontSize:11,color:"#64748b"}}>
+            {dataLoaded ? `📊 ${stats.n}回分のデータで分析中` : "みずほ銀行データ連携 × AI分析 × 当選自動チェック"}
+          </p>
         </div>
       </div>
 
-      {/* ── 当選アラート ── */}
-      {alerts.length>0 && (
+      {/* 当選アラート */}
+      {alerts.length>0&&(
         <div style={{padding:"12px 16px 0"}} className="slidein">
           {alerts.map((a,i)=>(
             <div key={i} className="pulse-slow" style={{background:`linear-gradient(135deg,${a.bg}cc,${a.bg}99)`,border:`1.5px solid ${a.color}88`,borderRadius:16,padding:16,marginBottom:10}}>
@@ -280,9 +361,7 @@ function App() {
               </div>
               <p style={{fontSize:12,color:"#e2e8f0",marginBottom:8}}>{a.setLabel} が当選！</p>
               <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:4}}>
-                {a.setNums.map(n=>(
-                  <Ball key={n} num={n} sm type={a.winNums.includes(n)?"hit":a.bonNums.includes(n)?"bonus":"main"} hl={a.winNums.includes(n)}/>
-                ))}
+                {a.setNums.map(n=><Ball key={n} num={n} sm type={a.winNums.includes(n)?"hit":a.bonNums.includes(n)?"bonus":"main"} hl={a.winNums.includes(n)}/>)}
               </div>
               <p style={{fontSize:10,color:"#94a3b8"}}>黄色 = 本数字一致</p>
             </div>
@@ -291,7 +370,7 @@ function App() {
         </div>
       )}
 
-      {/* ── データバナー ── */}
+      {/* データバナー */}
       <div style={{margin:"12px 16px 0",background:"rgba(30,27,75,.7)",border:"1px solid rgba(99,102,241,.3)",borderRadius:14,padding:"10px 12px"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div style={{flex:1,minWidth:0}}>
@@ -301,15 +380,18 @@ function App() {
                 <span style={{fontSize:10,background:"rgba(67,56,202,.5)",color:"#a5b4fc",padding:"1px 6px",borderRadius:6,fontFamily:"monospace"}}>🔄 {fmtCnt(countdown)}</span>
               )}
             </div>
-            <p style={{margin:"2px 0",fontSize:13,fontWeight:700,color:"#818cf8"}}>みずほ銀行 ロト7当選番号</p>
+            <p style={{margin:"2px 0",fontSize:13,fontWeight:700,color:"#818cf8"}}>
+              みずほ銀行 ロト7当選番号
+              {dataLoaded&&<span style={{fontSize:10,color:"#6ee7b7",marginLeft:6}}>✅ {stats.n}回分</span>}
+            </p>
             <p style={{margin:0,fontSize:10,color:"#475569"}}>
-              {fetchSt==="fetching"?"⏳ データ取得中..."
-                :fetchSt==="error"?`⚠️ 取得失敗（内蔵データ使用）${lastUp?" · "+lastUp.toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"}):""}` 
+              {fetchSt==="fetching"?"⏳ 最新データ取得中..."
+                :fetchSt==="error"?`⚠️ 取得失敗（内蔵データ使用）${lastUp?" · "+lastUp.toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"}):""}`
                 :fetchSt==="done"?`✅ ${history.length}回分 · ${lastUp?lastUp.toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"})+" 更新":""}`
-                :`📊 初回取得中... (${history.length}回分)`}
+                :`📊 データ読込中... (${history.length}回分)`}
             </p>
           </div>
-          <button onClick={()=>{setCountdown(AUTO_MS/1000);fetchData(saved);}} disabled={fetchSt==="fetching"}
+          <button onClick={()=>{setCountdown(AUTO_MS/1000);loadDataJson().then(h=>fetchLatest(saved,h));}} disabled={fetchSt==="fetching"}
             style={{marginLeft:8,background:"#4f46e5",color:"#fff",border:"none",borderRadius:10,padding:"8px 12px",fontWeight:700,fontSize:13,cursor:"pointer",opacity:fetchSt==="fetching"?.5:1}}>
             {fetchSt==="fetching"?<span className="spin">⚙️</span>:"🔄"}
           </button>
@@ -321,7 +403,7 @@ function App() {
         )}
       </div>
 
-      {/* ── タブコンテンツ ── */}
+      {/* タブコンテンツ */}
       <div style={{padding:"16px 16px 0"}} className="scroll-area">
 
         {/* 予想タブ */}
@@ -341,12 +423,12 @@ function App() {
             )}
             <button onClick={generate} disabled={loading}
               style={{width:"100%",padding:"16px",background:"linear-gradient(135deg,#4f46e5,#7c3aed)",color:"#fff",border:"none",borderRadius:14,fontSize:17,fontWeight:900,cursor:"pointer",marginBottom:16,opacity:loading?.6:1,letterSpacing:"-.01em"}}>
-              {loading?<span><span className="spin">⚙️</span> AI分析中...</span>:"✨ 予想番号を生成する"}
+              {loading?<span><span className="spin">⚙️</span> AI分析中({stats.n}回分)...</span>:`✨ 予想番号を生成する（${stats.n}回分析）`}
             </button>
 
             {sets.length>0&&(
               <div>
-                <p style={{textAlign:"center",fontSize:11,color:"#475569",marginBottom:12}}>── 4種アルゴリズムによる予想 ──</p>
+                <p style={{textAlign:"center",fontSize:11,color:"#475569",marginBottom:12}}>── {stats.n}回分データによる4種アルゴリズム予想 ──</p>
                 {sets.map((s,i)=>(
                   <div key={i} style={{background:TAG_BG[s.tag],border:`1px solid ${TAG_BORDER[s.tag]}`,borderRadius:14,padding:14,marginBottom:12}}>
                     <div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}>
@@ -361,7 +443,7 @@ function App() {
                 ))}
                 {aiMsg&&(
                   <div style={{background:"rgba(120,53,15,.2)",border:"1px solid rgba(217,119,6,.3)",borderRadius:14,padding:14,marginBottom:12}}>
-                    <p style={{margin:"0 0 6px",fontSize:11,fontWeight:700,color:"#fbbf24"}}>🤖 AI総合解説</p>
+                    <p style={{margin:"0 0 6px",fontSize:11,fontWeight:700,color:"#fbbf24"}}>🤖 AI総合解説（{stats.n}回分析）</p>
                     <p style={{margin:0,fontSize:12,color:"#e2e8f0",lineHeight:1.7,whiteSpace:"pre-line"}}>{aiMsg}</p>
                   </div>
                 )}
@@ -428,7 +510,7 @@ function App() {
         {/* 履歴タブ */}
         {tab==="history"&&(
           <div>
-            <p style={{fontSize:11,color:"#475569",marginBottom:10}}>過去{history.length}回分の当選番号</p>
+            <p style={{fontSize:11,color:"#475569",marginBottom:10}}>過去{history.length}回分の当選番号（第1回〜第{history[0]?.round}回）</p>
             {history.map(d=>(
               <div key={d.round} style={{background:"rgba(30,27,75,.5)",border:"1px solid rgba(51,65,85,.5)",borderRadius:14,padding:12,marginBottom:10}}>
                 <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
@@ -450,25 +532,58 @@ function App() {
         {/* 統計タブ */}
         {tab==="stats"&&(
           <div>
+            {/* データ量バッジ */}
+            <div style={{background:"rgba(67,56,202,.2)",border:"1px solid rgba(99,102,241,.3)",borderRadius:14,padding:12,marginBottom:14,textAlign:"center"}}>
+              <span style={{fontSize:22,fontWeight:900,color:"#a5b4fc"}}>{stats.n}回分</span>
+              <span style={{fontSize:12,color:"#64748b",marginLeft:8}}>のデータで分析</span>
+              <p style={{margin:"4px 0 0",fontSize:10,color:"#334155"}}>第1回(2013/04/05)〜第{history[0]?.round}回({history[0]?.date})</p>
+            </div>
+
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
               <div style={{background:"rgba(120,53,15,.3)",border:"1px solid rgba(249,115,22,.3)",borderRadius:14,padding:12}}>
                 <p style={{margin:"0 0 8px",fontSize:11,color:"#fb923c",fontWeight:700}}>🔥 よく出る TOP5</p>
                 <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
-                  {byFreq.slice(0,5).map(x=><Ball key={x.num} num={x.num} type="hot" sm/>)}
+                  {byFreq.slice(0,5).map(x=>(
+                    <div key={x.num} style={{textAlign:"center"}}>
+                      <Ball num={x.num} type="hot" sm/>
+                      <div style={{fontSize:9,color:"#fb923c",marginTop:2}}>{x.count}回</div>
+                    </div>
+                  ))}
                 </div>
               </div>
               <div style={{background:"rgba(12,74,110,.3)",border:"1px solid rgba(14,165,233,.25)",borderRadius:14,padding:12}}>
                 <p style={{margin:"0 0 8px",fontSize:11,color:"#38bdf8",fontWeight:700}}>❄️ 出にくい TOP5</p>
                 <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
-                  {byFreq.slice(-5).reverse().map(x=><Ball key={x.num} num={x.num} type="cold" sm/>)}
+                  {byFreq.slice(-5).reverse().map(x=>(
+                    <div key={x.num} style={{textAlign:"center"}}>
+                      <Ball num={x.num} type="cold" sm/>
+                      <div style={{fontSize:9,color:"#38bdf8",marginTop:2}}>{x.count}回</div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
+
+            {/* 直近20回コールド */}
+            <div style={{background:"rgba(30,27,75,.5)",border:"1px solid rgba(51,65,85,.5)",borderRadius:14,padding:14,marginBottom:14}}>
+              <p style={{margin:"0 0 8px",fontSize:11,color:"#64748b"}}>❄️ 直近20回未出現（リバウンド候補）</p>
+              <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+                {Array.from({length:37},(_,i)=>i+1).filter(n=>!stats.recent20.has(n)).map(n=>(
+                  <div key={n} style={{textAlign:"center"}}>
+                    <Ball num={n} type="cold" sm/>
+                  </div>
+                ))}
+                {Array.from({length:37},(_,i)=>i+1).filter(n=>!stats.recent20.has(n)).length===0&&(
+                  <p style={{fontSize:11,color:"#475569"}}>全数字が直近20回以内に出現しています</p>
+                )}
+              </div>
+            </div>
+
             <div style={{background:"rgba(30,27,75,.5)",border:"1px solid rgba(51,65,85,.5)",borderRadius:14,padding:14,marginBottom:14}}>
               <p style={{margin:"0 0 10px",fontSize:11,color:"#64748b"}}>📊 出現頻度ランキング（全37数字）</p>
               {byFreq.map((x,i)=>{
                 const pct=Math.round((x.count/maxF)*100);
-                const type=i<7?"hot":i>history.length*7/37*1.5?"cold":"bal";
+                const type=i<7?"hot":i>=30?"cold":"bal";
                 const bc=type==="hot"?"#f97316":type==="cold"?"#64748b":"#8b5cf6";
                 return(
                   <div key={x.num} style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
@@ -476,22 +591,25 @@ function App() {
                     <div style={{flex:1,background:"rgba(255,255,255,.06)",borderRadius:4,height:6}}>
                       <div style={{height:6,background:bc,borderRadius:4,width:`${pct}%`}}/>
                     </div>
-                    <span style={{fontSize:10,color:"#475569",width:28,textAlign:"right"}}>{x.count}回</span>
+                    <span style={{fontSize:10,color:"#475569",width:36,textAlign:"right"}}>{x.count}回</span>
                   </div>
                 );
               })}
             </div>
+
             <div style={{background:"rgba(30,27,75,.5)",border:"1px solid rgba(51,65,85,.5)",borderRadius:14,padding:14,marginBottom:14}}>
               <p style={{margin:"0 0 10px",fontSize:11,color:"#64748b"}}>📈 分析サマリー</p>
               {[
-                ["分析対象回数",`${history.length}回`,"#818cf8"],
-                ["最高頻出番号",`${byFreq[0]?.num}番 (${byFreq[0]?.count}回)`,"#fb923c"],
-                ["最低頻出番号",`${byFreq[36]?.num}番 (${byFreq[36]?.count}回)`,"#64748b"],
-                ["平均出現回数",`${(history.length*7/37).toFixed(1)}回`,"#c4b5fd"],
+                ["分析対象回数",`${stats.n}回（第1〜${history[0]?.round}回）`,"#818cf8"],
+                ["最高頻出番号",`${byFreq[0]?.num}番 (${byFreq[0]?.count}回/${stats.n}回)`,"#fb923c"],
+                ["最低頻出番号",`${byFreq[36]?.num}番 (${byFreq[36]?.count}回/${stats.n}回)`,"#64748b"],
+                ["平均出現回数",`${(stats.n*7/37).toFixed(1)}回`,"#c4b5fd"],
+                ["直近20回コールド",`${37-stats.recent20.size}個`,"#38bdf8"],
+                ["期間",`2013/04/05〜${history[0]?.date}`,"#6ee7b7"],
               ].map(([k,v,c])=>(
                 <div key={k} style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
-                  <span style={{fontSize:13,color:"#64748b"}}>{k}</span>
-                  <span style={{fontSize:13,fontWeight:700,color:c}}>{v}</span>
+                  <span style={{fontSize:12,color:"#64748b"}}>{k}</span>
+                  <span style={{fontSize:12,fontWeight:700,color:c}}>{v}</span>
                 </div>
               ))}
             </div>
@@ -500,7 +618,7 @@ function App() {
         )}
       </div>
 
-      {/* ── ボトムナビ ── */}
+      {/* ボトムナビ */}
       <nav className="bottom-nav" style={{background:"rgba(15,14,26,.92)",backdropFilter:"blur(16px)",WebkitBackdropFilter:"blur(16px)",borderTop:"1px solid rgba(99,102,241,.2)"}}>
         <div style={{display:"flex",justifyContent:"space-around",padding:"10px 0 2px"}}>
           {tabs.map(t=>(
