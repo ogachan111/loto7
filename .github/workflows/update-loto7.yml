@@ -1,0 +1,49 @@
+name: ロト7 当選番号 自動更新
+
+on:
+  schedule:
+    # 毎週金曜日 21:00 JST (12:00 UTC) ← 抽選後に取得
+    - cron: '0 12 * * 5'
+    # 毎週土曜日 09:00 JST (00:00 UTC) ← 念のため再取得
+    - cron: '0 0 * * 6'
+  workflow_dispatch:  # 手動実行ボタン
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: リポジトリをチェックアウト
+        uses: actions/checkout@v4
+        with:
+          ref: main1
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pythonをセットアップ
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 必要なライブラリをインストール
+        run: pip install requests beautifulsoup4
+
+      - name: ロト7当選番号を取得・HTMLを更新
+        run: python fetch_loto7.py
+
+      - name: 変更をGitHubにプッシュ
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git diff --staged --quiet || git commit -m "🎯 ロト7当選番号自動更新: $(date '+%Y/%m/%d %H:%M') JST"
+          git push
+
+      - name: 当選チェック・メール通知
+        run: python notify_loto7.py
+        env:
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          NOTIFY_EMAIL: ${{ secrets.NOTIFY_EMAIL }}
