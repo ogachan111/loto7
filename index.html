@@ -350,9 +350,7 @@ function App() {
         <div style={{textAlign:"center"}}>
           <div style={{fontSize:28,lineHeight:1}}>🎯</div>
           <h1 style={{margin:"4px 0 0",fontSize:18,fontWeight:900,letterSpacing:"-0.02em"}}>LOTO7 <span style={{color:"#a5b4fc"}}>予想アプリ</span></h1>
-          <p style={{margin:"2px 0 0",fontSize:11,color:"#64748b"}}>
-            {dataLoaded ? `📊 ${stats.n}回分のデータで分析中` : "みずほ銀行データ連携 × AI分析 × 当選自動チェック"}
-          </p>
+          <p style={{margin:"2px 0 0",fontSize:11,color:"#64748b"}}>📊 {stats.n}回分データ × AI分析 × 当選自動チェック</p>
         </div>
       </div>
 
@@ -376,38 +374,7 @@ function App() {
         </div>
       )}
 
-      {/* データバナー */}
-      <div style={{margin:"12px 16px 0",background:"rgba(30,27,75,.7)",border:"1px solid rgba(99,102,241,.3)",borderRadius:14,padding:"10px 12px"}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-          <div style={{flex:1,minWidth:0}}>
-            <div style={{display:"flex",alignItems:"center",gap:6}}>
-              <span style={{fontSize:11,color:"#64748b"}}>データソース</span>
-              {fetchSt!=="fetching"&&countdown!==null&&(
-                <span style={{fontSize:10,background:"rgba(67,56,202,.5)",color:"#a5b4fc",padding:"1px 6px",borderRadius:6,fontFamily:"monospace"}}>🔄 {fmtCnt(countdown)}</span>
-              )}
-            </div>
-            <p style={{margin:"2px 0",fontSize:13,fontWeight:700,color:"#818cf8"}}>
-              みずほ銀行 ロト7当選番号
-              {dataLoaded&&<span style={{fontSize:10,color:"#6ee7b7",marginLeft:6}}>✅ {stats.n}回分</span>}
-            </p>
-            <p style={{margin:0,fontSize:10,color:"#475569"}}>
-              {fetchSt==="fetching"?"⏳ 最新データ取得中..."
-                :fetchSt==="error"?`⚠️ 取得失敗（内蔵データ使用）${lastUp?" · "+lastUp.toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"}):""}`
-                :fetchSt==="done"?`✅ ${history.length}回分 · ${lastUp?lastUp.toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"})+" 更新":""}`
-                :`📊 データ読込中... (${history.length}回分)`}
-            </p>
-          </div>
-          <button onClick={()=>{setCountdown(AUTO_MS/1000);loadDataJson().then(h=>fetchLatest(saved,h));}} disabled={fetchSt==="fetching"}
-            style={{marginLeft:8,background:"#4f46e5",color:"#fff",border:"none",borderRadius:10,padding:"8px 12px",fontWeight:700,fontSize:13,cursor:"pointer",opacity:fetchSt==="fetching"?.5:1}}>
-            {fetchSt==="fetching"?<span className="spin">⚙️</span>:"🔄"}
-          </button>
-        </div>
-        {fetchSt!=="fetching"&&countdown!==null&&(
-          <div style={{marginTop:8,background:"rgba(255,255,255,.08)",borderRadius:4,height:2}}>
-            <div style={{height:2,background:"#6366f1",borderRadius:4,transition:"width 1s linear",width:`${((AUTO_MS/1000-countdown)/(AUTO_MS/1000))*100}%`}}/>
-          </div>
-        )}
-      </div>
+
 
       {/* タブコンテンツ */}
       <div style={{padding:"16px 16px 0"}} className="scroll-area">
