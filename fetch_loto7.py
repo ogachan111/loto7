@@ -1,225 +1,655 @@
-import requests
-from bs4 import BeautifulSoup
-import re
-import json
-import time
-from datetime import datetime
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <title>LOTO7予想アプリ</title>
 
-# より本物に近いブラウザヘッダー
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-    "Accept-Language": "ja-JP,ja;q=0.9,en-US;q=0.8,en;q=0.7",
-    "Accept-Encoding": "gzip, deflate, br",
-    "Connection": "keep-alive",
-    "Upgrade-Insecure-Requests": "1",
-    "Sec-Fetch-Dest": "document",
-    "Sec-Fetch-Mode": "navigate",
-    "Sec-Fetch-Site": "none",
-    "Referer": "https://www.mizuhobank.co.jp/takarakuji/check/loto/backnumber/index.html",
+  <!-- PWA -->
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="LOTO7"/>
+  <meta name="theme-color" content="#1e1b4b"/>
+  <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjggMTI4Ij48cmVjdCB3aWR0aD0iMTI4IiBoZWlnaHQ9IjEyOCIgcng9IjI0IiBmaWxsPSIjMWUxYjRiIi8+PHRleHQgeD0iNjQiIHk9Ijg0IiBmb250LXNpemU9IjcyIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj7wn2mPPC90ZXh0Pjwvc3ZnPg=="/>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+    body { margin: 0; background: #0f0e1a; overscroll-behavior: none; }
+    .safe-top    { padding-top:    env(safe-area-inset-top,    16px); }
+    .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 16px); }
+    .scroll-area { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0;
+                  padding-bottom: env(safe-area-inset-bottom, 0px); z-index: 50; }
+    @keyframes pulse-slow { 0%,100%{opacity:1} 50%{opacity:.6} }
+    .pulse-slow { animation: pulse-slow 2s infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spin { animation: spin .8s linear infinite; display:inline-block; }
+    @keyframes slidein { from{transform:translateY(-20px);opacity:0} to{transform:translateY(0);opacity:1} }
+    .slidein { animation: slidein .4s ease; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef, useMemo } = React;
+
+// ── ストレージ ──
+const store = {
+  get: (k) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch(_){return null;} },
+  set: (k,v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch(_){} },
+  del: (k)   => { try { localStorage.removeItem(k); } catch(_){} },
+};
+
+// ── 定数 ──
+const DATA_JSON_URL = "https://ogachan111.github.io/loto7/data.json";
+const SEED_DATA = [{"round":682,"date":"2026-06-19","numbers":[11,14,17,23,28,30,36],"bonus":[12,20]},{"round":681,"date":"2026-06-12","numbers":[1,10,12,13,19,33,35],"bonus":[14,37]},{"round":680,"date":"2026-06-05","numbers":[9,10,22,26,27,31,36],"bonus":[20,29]},{"round":679,"date":"2026-05-29","numbers":[6,8,9,18,22,24,35],"bonus":[4,20]},{"round":678,"date":"2026-05-22","numbers":[2,6,12,15,24,26,34],"bonus":[18,20]},{"round":677,"date":"2026-05-15","numbers":[5,6,7,8,15,17,19],"bonus":[1,33]},{"round":676,"date":"2026-05-08","numbers":[2,6,15,19,20,22,27],"bonus":[31,33]},{"round":675,"date":"2026-05-01","numbers":[5,8,16,18,24,28,31],"bonus":[6,23]},{"round":674,"date":"2026-04-24","numbers":[1,6,7,9,12,22,26],"bonus":[8,14]},{"round":673,"date":"2026-04-17","numbers":[6,9,10,12,16,24,32],"bonus":[17,19]},{"round":672,"date":"2026-04-10","numbers":[7,11,15,16,17,24,33],"bonus":[6,9]},{"round":671,"date":"2026-04-03","numbers":[7,13,16,22,28,33,36],"bonus":[2,25]},{"round":670,"date":"2026-03-27","numbers":[3,4,9,10,18,21,37],"bonus":[15,23]},{"round":669,"date":"2026-03-20","numbers":[3,5,6,7,9,13,16],"bonus":[11,23]},{"round":668,"date":"2026-03-13","numbers":[1,8,11,14,18,22,29],"bonus":[19,35]},{"round":667,"date":"2026-03-06","numbers":[9,13,20,22,28,29,33],"bonus":[21,23]},{"round":666,"date":"2026-02-27","numbers":[2,17,18,22,23,25,33],"bonus":[16,34]},{"round":665,"date":"2026-02-20","numbers":[6,8,14,19,22,25,35],"bonus":[12,17]},{"round":664,"date":"2026-02-13","numbers":[3,6,8,14,21,22,31],"bonus":[17,37]},{"round":663,"date":"2026-02-06","numbers":[4,6,10,11,13,17,23],"bonus":[25,32]},{"round":662,"date":"2026-01-30","numbers":[4,14,15,21,22,24,37],"bonus":[5,20]},{"round":661,"date":"2026-01-23","numbers":[7,12,17,22,31,34,35],"bonus":[20,32]},{"round":660,"date":"2026-01-16","numbers":[4,6,12,13,16,17,31],"bonus":[14,20]},{"round":659,"date":"2026-01-09","numbers":[2,8,9,14,27,34,36],"bonus":[5,18]}];
+const AUTO_MS = 10*60*1000;
+
+// ── 等級判定 ──
+const judgeGrade = (my, win, bon) => {
+  const s = new Set(my);
+  const m = win.filter(n=>s.has(n)).length;
+  const b = bon.filter(n=>s.has(n)).length;
+  if(m===7)               return {grade:1,label:"🏆 1等！",color:"#fde047",bg:"#78350f"};
+  if(m===6&&b>=1)         return {grade:2,label:"🥇 2等！",color:"#fb923c",bg:"#7c2d12"};
+  if(m===6)               return {grade:3,label:"🥈 3等！",color:"#fb923c",bg:"#7c2d12"};
+  if(m===5&&b>=1)         return {grade:4,label:"🥉 4等！",color:"#a5b4fc",bg:"#312e81"};
+  if(m===5)               return {grade:5,label:"✨ 5等！",color:"#a5b4fc",bg:"#312e81"};
+  if(m===4)               return {grade:6,label:"🎉 6等！",color:"#5eead4",bg:"#134e4a"};
+  if(m===3||(m===2&&b>=1))return{grade:7,label:"🎊 7等！",color:"#86efac",bg:"#14532d"};
+  return null;
+};
+
+// ── Claude API ──
+const callClaude = async (prompt, sys) => {
+  const r = await fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({
+      model:"claude-sonnet-4-6", max_tokens:1000,
+      system: sys||"You are a helpful assistant. Respond in Japanese.",
+      messages:[{role:"user",content:prompt}],
+      tools:[{type:"web_search_20250305",name:"web_search"}],
+    })
+  });
+  const d = await r.json();
+  return d.content.filter(b=>b.type==="text").map(b=>b.text).join("\n");
+};
+
+// ── 統計計算（682件対応・重み付きスコア） ──
+const calcStats = (history) => {
+  const n = history.length;
+  // 全期間頻度
+  const freq = {}; for(let i=1;i<=37;i++) freq[i]=0;
+  history.forEach(d=>d.numbers.forEach(n=>freq[n]++));
+
+  // 重み付きスコア（直近ほど重視）
+  const score = {}; for(let i=1;i<=37;i++) score[i]=0;
+  history.forEach((d,i)=>{
+    const w = Math.exp(-i/(n*0.4));
+    d.numbers.forEach(n=>{ score[n]+=w; });
+  });
+
+  // 直近20回の出現数字
+  const recent20 = new Set(history.slice(0,20).flatMap(d=>d.numbers));
+  // 直近5回の出現数字
+  const recent5  = new Set(history.slice(0,5).flatMap(d=>d.numbers));
+
+  // ボーナス数字頻度
+  const bonusFreq = {}; for(let i=1;i<=37;i++) bonusFreq[i]=0;
+  history.forEach(d=>d.bonus.forEach(n=>bonusFreq[n]++));
+
+  // 連続ペア出現頻度
+  const pairFreq = {};
+  history.forEach(d=>{
+    const nums = [...d.numbers].sort((a,b)=>a-b);
+    for(let i=0;i<nums.length-1;i++){
+      if(nums[i+1]-nums[i]===1){
+        const key=`${nums[i]}-${nums[i+1]}`;
+        pairFreq[key]=(pairFreq[key]||0)+1;
+      }
+    }
+  });
+
+  // 直近20回のボーナス数字
+  const recentBonus20 = new Set(history.slice(0,20).flatMap(d=>d.bonus));
+
+  return { freq, score, recent20, recent5, bonusFreq, pairFreq, recentBonus20, n };
+};
+
+// ── 予想アルゴリズム（682件 × 合計値傾向対応） ──
+const rnd = (arr, n) => [...arr].sort(()=>Math.random()-.5).slice(0,n);
+
+// 合計値が目標範囲に入る7個を生成
+const predictWithSum = (stats, targetMin, targetMax, useCold=false) => {
+  const sorted = Object.entries(stats.score).map(([n,v])=>({num:+n,score:v})).sort((a,b)=>b.score-a.score);
+  const top20 = sorted.slice(0,20).map(x=>x.num);
+  const cold = Array.from({length:37},(_,i)=>i+1).filter(n=>!stats.recent20.has(n));
+  for(let attempt=0; attempt<3000; attempt++){
+    let pick;
+    if(useCold && cold.length >= 2){
+      const coldPick = rnd(cold, 2);
+      const hotPool = top20.filter(n=>!coldPick.includes(n));
+      pick = [...coldPick, ...rnd(hotPool, 5)];
+    } else {
+      pick = rnd(top20, 7);
+    }
+    const s = pick.reduce((a,b)=>a+b, 0);
+    if(s >= targetMin && s <= targetMax) return pick.sort((a,b)=>a-b);
+  }
+  return rnd(sorted.slice(0,15), 7).map(x=>x.num).sort((a,b)=>a-b);
+};
+
+// ボーナス数字予想（頻出1個＋コールド1個）
+const predictBonus = (stats, excludeNums) => {
+  const bonusSorted = Object.entries(stats.bonusFreq).map(([n,v])=>({num:+n,score:v})).sort((a,b)=>b.score-a.score);
+  const bonusHot = bonusSorted.slice(0,10).map(x=>x.num).filter(n=>!excludeNums.has(n));
+  const bonusCold = Array.from({length:37},(_,i)=>i+1).filter(n=>!stats.recentBonus20.has(n) && !excludeNums.has(n));
+  const b1 = bonusHot.length>0 ? bonusHot[Math.floor(Math.random()*Math.min(5,bonusHot.length))] : bonusSorted.find(x=>!excludeNums.has(x.num))?.num||14;
+  const pool2 = bonusCold.filter(n=>n!==b1);
+  const b2 = pool2.length>0 ? pool2[Math.floor(Math.random()*pool2.length)] : bonusSorted.filter(x=>!excludeNums.has(x.num)&&x.num!==b1)[0]?.num||20;
+  return [b1,b2].sort((a,b)=>a-b);
+};
+
+const genSets = (stats) => {
+  const s1 = predictWithSum(stats, 126, 136, false);
+  const s2 = predictWithSum(stats, 138, 148, false);
+  const s3 = predictWithSum(stats, 126, 143, true);
+  const s4 = predictWithSum(stats, 129, 137, false);
+  const sum1=s1.reduce((a,b)=>a+b,0), sum2=s2.reduce((a,b)=>a+b,0);
+  const sum3=s3.reduce((a,b)=>a+b,0), sum4=s4.reduce((a,b)=>a+b,0);
+  return [
+    {label:"🔥 ホット×合計130狙い",    tag:"hot",  desc:`頻出数字で合計${sum1}（682回で出やすい帯126〜136）`,   numbers:s1, bonus:predictBonus(stats,new Set(s1))},
+    {label:"⚖️ バランス×合計143狙い",  tag:"bal",  desc:`バランス重視で合計${sum2}（出やすい帯138〜148）`,      numbers:s2, bonus:predictBonus(stats,new Set(s2))},
+    {label:"❄️ コールド×合計範囲内",   tag:"cold", desc:`直近未出現を混え合計${sum3}（リバウンド狙い）`,         numbers:s3, bonus:predictBonus(stats,new Set(s3))},
+    {label:"🎯 平均合計133狙い",        tag:"con",  desc:`682回平均133.4に近い合計${sum4}を狙う`,               numbers:s4, bonus:predictBonus(stats,new Set(s4))},
+  ];
+};
+
+// ── Ball コンポーネント ──
+const BALL_COLORS = {
+  main:"linear-gradient(135deg,#6366f1,#3b82f6)",
+  bonus:"linear-gradient(135deg,#f43f5e,#ec4899)",
+  hot:"linear-gradient(135deg,#f97316,#d97706)",
+  cold:"linear-gradient(135deg,#0ea5e9,#1d4ed8)",
+  bal:"linear-gradient(135deg,#8b5cf6,#7c3aed)",
+  con:"linear-gradient(135deg,#10b981,#0d9488)",
+  hit:"linear-gradient(135deg,#eab308,#f59e0b)",
+};
+const Ball = ({num, type="main", sm=false, hl=false}) => (
+  <div style={{
+    width:sm?32:44, height:sm?32:44, borderRadius:"50%",
+    background: hl ? BALL_COLORS.hit : (BALL_COLORS[type]||BALL_COLORS.main),
+    color:"#fff", fontWeight:700, fontSize:sm?11:13,
+    display:"flex", alignItems:"center", justifyContent:"center",
+    boxShadow: hl?"0 0 0 2px #fde047, 0 2px 8px rgba(0,0,0,.4)":"0 2px 8px rgba(0,0,0,.4)",
+    flexShrink:0, transform: hl?"scale(1.1)":"scale(1)",
+    transition:"transform .2s",
+  }}>
+    {String(num).padStart(2,"0")}
+  </div>
+);
+
+const TAG_BG     = {hot:"rgba(120,53,15,.45)",cold:"rgba(12,74,110,.45)",bal:"rgba(46,16,101,.45)",con:"rgba(6,78,59,.45)"};
+const TAG_BORDER = {hot:"rgba(249,115,22,.4)",cold:"rgba(14,165,233,.3)",bal:"rgba(139,92,246,.4)",con:"rgba(16,185,129,.4)"};
+const TAG_COLOR  = {hot:"#fb923c",cold:"#38bdf8",bal:"#c4b5fd",con:"#6ee7b7"};
+
+function App() {
+  const [tab,setTab]       = useState("predict");
+  const [loading,setLoading] = useState(false);
+  const [aiMsg,setAiMsg]   = useState("");
+  const [history,setHistory] = useState(SEED_DATA);
+  const [dataLoaded,setDataLoaded] = useState(false); // data.json読込済みか
+  const [fetchSt,setFetchSt] = useState("idle");
+  const [sets,setSets]     = useState([]);
+  const [saved,setSaved]   = useState(()=>store.get("loto7_saved"));
+  const [alerts,setAlerts] = useState([]);
+  const [checkedRound,setCheckedRound] = useState(()=>store.get("loto7_checked"));
+  const [lastUp,setLastUp] = useState(null);
+  const [countdown,setCountdown] = useState(null);
+  const fetched = useRef(false);
+  const intv    = useRef(null);
+  const cntdwn  = useRef(null);
+
+  // 統計計算（682件対応）
+  const stats = useMemo(()=>calcStats(history),[history]);
+  const byFreq = useMemo(()=>
+    Object.entries(stats.freq).map(([n,c])=>({num:+n,count:c})).sort((a,b)=>b.count-a.count),
+  [stats]);
+  const maxF = byFreq[0]?.count || 1;
+
+  // 当選照合
+  const checkWins = (hist, sv) => {
+    if(!sv||!sv.length) return;
+    const latest = hist[0]; if(!latest) return;
+    if(checkedRound===latest.round) return;
+    const al=[];
+    sv.forEach((s,si)=>{
+      const res=judgeGrade(s.numbers,latest.numbers,latest.bonus);
+      if(res) al.push({...res,si,setLabel:s.label,setNums:s.numbers,
+        round:latest.round,date:latest.date,winNums:latest.numbers,bonNums:latest.bonus});
+    });
+    setAlerts(al);
+    setCheckedRound(latest.round);
+    store.set("loto7_checked",latest.round);
+  };
+
+  // ① data.jsonを読み込む（682件）
+  const loadDataJson = async () => {
+    try {
+      const res = await fetch(DATA_JSON_URL + "?t=" + Date.now());
+      if(!res.ok) throw new Error("fetch failed");
+      const data = await res.json();
+      if(Array.isArray(data) && data.length > 0){
+        // SEED_DATAとマージして重複除去
+        const merged = [...data, ...SEED_DATA]
+          .filter((v,i,a)=>a.findIndex(x=>x.round===v.round)===i)
+          .sort((a,b)=>b.round-a.round);
+        setHistory(merged);
+        setDataLoaded(true);
+        setLastUp(new Date());
+        return merged;
+      }
+    } catch(e){
+      console.warn("data.json読込失敗:", e);
+    }
+    return null;
+  };
+
+  // ② みずほ銀行から最新データを取得
+  const fetchLatest = async (sv, hist) => {
+    setFetchSt("fetching");
+    try {
+      const res = await callClaude(
+        `みずほ銀行のロト7当選番号ページ（https://www.mizuhobank.co.jp/takarakuji/check/loto/loto7/index.html）を参照して最新の当選番号（直近3回分）をJSON配列で返してください。JSON以外不要：[{"round":682,"date":"2026-06-19","numbers":[1,2,3,4,5,6,7],"bonus":[8,9]},...]`,
+        "あなたはロト7当選番号データをJSON形式で返すAIです。web_searchで検索してJSONのみ返してください。"
+      );
+      const m = res.match(/\[[\s\S]*?\]/);
+      if(m){
+        const fetched = JSON.parse(m[0]);
+        if(Array.isArray(fetched) && fetched.length){
+          const base = hist || history;
+          const merged = [...fetched, ...base]
+            .filter((v,i,a)=>a.findIndex(x=>x.round===v.round)===i)
+            .sort((a,b)=>b.round-a.round);
+          setHistory(merged);
+          setFetchSt("done");
+          setLastUp(new Date());
+          setCountdown(AUTO_MS/1000);
+          checkWins(merged, sv!==undefined?sv:saved);
+          return;
+        }
+      }
+      setFetchSt("error"); setLastUp(new Date());
+    } catch(_){
+      setFetchSt("error"); setLastUp(new Date());
+    }
+  };
+
+  useEffect(()=>{
+    if(!fetched.current){
+      fetched.current = true;
+      // まずdata.jsonを読み込んでから最新データを取得
+      loadDataJson().then(hist => {
+        fetchLatest(saved, hist);
+      });
+    }
+    intv.current   = setInterval(()=>fetchLatest(null, null), AUTO_MS);
+    cntdwn.current = setInterval(()=>setCountdown(p=>p===null?null:p<=1?AUTO_MS/1000:p-1),1000);
+    return()=>{ clearInterval(intv.current); clearInterval(cntdwn.current); };
+  },[]);
+
+  useEffect(()=>{ if(saved&&history.length) checkWins(history,saved); },[saved]);
+
+  const fmtCnt = s=>s===null?"":`${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`;
+
+  // 予想生成
+  const generate = async () => {
+    setLoading(true); setAiMsg(""); setSets([]);
+    const g = genSets(stats); setSets(g);
+    const r3 = history.slice(0,3).map(d=>`第${d.round}回:[${d.numbers.join(",")}]`).join("、");
+    const desc = g.map((s,i)=>`セット${i+1}(${s.label.replace(/[^\w\s]/g,"").trim()}):[${s.numbers.join(",")}]`).join("\n");
+    const topHot = byFreq.slice(0,5).map(x=>`${x.num}番(${x.count}回)`).join(",");
+    const topCold = byFreq.slice(-5).map(x=>`${x.num}番(${x.count}回)`).join(",");
+    try {
+      const c = await callClaude(
+        `ロト7予想4セット生成。分析対象:${stats.n}回分。直近3回:${r3}\n頻出TOP5:${topHot}\n低頻度TOP5:${topCold}\n${desc}\n各セット1〜2文で日本語解説。形式:セット1:〜/セット2:〜/セット3:〜/セット4:〜`,
+        `ロト7統計アドバイザー。${stats.n}回分のデータを分析して端的に日本語で。当選保証なし。`
+      );
+      setAiMsg(c);
+    } catch(_){ setAiMsg(`${stats.n}回分の統計データを基に4種アルゴリズムで予想セットを生成しました。`); }
+    setLoading(false);
+  };
+
+  const registerSets = () => {
+    if(!sets.length) return;
+    setSaved(sets); store.set("loto7_saved",sets);
+    setAlerts([]); setCheckedRound(null); store.del("loto7_checked");
+    alert("✅ 4セットを登録しました！\n次回抽選後に自動で当選チェックします。");
+  };
+
+  const latest = history[0];
+
+  const tabs=[
+    {id:"predict",icon:"🎯",label:"予想"},
+    {id:"mysets", icon:"📌",label:"購入"},
+    {id:"history",icon:"📋",label:"履歴"},
+    {id:"stats",  icon:"📊",label:"統計"},
+  ];
+
+  return (
+    <div style={{minHeight:"100vh",background:"linear-gradient(160deg,#0f0e1a 0%,#1e1b4b 50%,#0f0e1a 100%)",color:"#f1f5f9",fontFamily:"-apple-system,sans-serif",paddingBottom:80}}>
+
+      {/* ヘッダー */}
+      <div className="safe-top" style={{background:"rgba(30,27,75,.85)",backdropFilter:"blur(12px)",WebkitBackdropFilter:"blur(12px)",borderBottom:"1px solid rgba(99,102,241,.25)",padding:"12px 16px 12px"}}>
+        <div style={{textAlign:"center"}}>
+          <div style={{fontSize:28,lineHeight:1}}>🎯</div>
+          <h1 style={{margin:"4px 0 0",fontSize:18,fontWeight:900,letterSpacing:"-0.02em"}}>LOTO7 <span style={{color:"#a5b4fc"}}>予想アプリ</span></h1>
+          <p style={{margin:"2px 0 0",fontSize:11,color:"#64748b"}}>
+            {dataLoaded ? `📊 ${stats.n}回分のデータで分析中` : "みずほ銀行データ連携 × AI分析 × 当選自動チェック"}
+          </p>
+        </div>
+      </div>
+
+      {/* 当選アラート */}
+      {alerts.length>0&&(
+        <div style={{padding:"12px 16px 0"}} className="slidein">
+          {alerts.map((a,i)=>(
+            <div key={i} className="pulse-slow" style={{background:`linear-gradient(135deg,${a.bg}cc,${a.bg}99)`,border:`1.5px solid ${a.color}88`,borderRadius:16,padding:16,marginBottom:10}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+                <span style={{fontSize:20,fontWeight:900,color:a.color}}>{a.label}</span>
+                <span style={{fontSize:11,color:"#cbd5e1"}}>第{a.round}回 ({a.date})</span>
+              </div>
+              <p style={{fontSize:12,color:"#e2e8f0",marginBottom:8}}>{a.setLabel} が当選！</p>
+              <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:4}}>
+                {a.setNums.map(n=><Ball key={n} num={n} sm type={a.winNums.includes(n)?"hit":a.bonNums.includes(n)?"bonus":"main"} hl={a.winNums.includes(n)}/>)}
+              </div>
+              <p style={{fontSize:10,color:"#94a3b8"}}>黄色 = 本数字一致</p>
+            </div>
+          ))}
+          <button onClick={()=>setAlerts([])} style={{width:"100%",padding:"6px",background:"none",border:"none",color:"#64748b",fontSize:12,cursor:"pointer"}}>閉じる ×</button>
+        </div>
+      )}
+
+      {/* データバナー */}
+      <div style={{margin:"12px 16px 0",background:"rgba(30,27,75,.7)",border:"1px solid rgba(99,102,241,.3)",borderRadius:14,padding:"10px 12px"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{display:"flex",alignItems:"center",gap:6}}>
+              <span style={{fontSize:11,color:"#64748b"}}>データソース</span>
+              {fetchSt!=="fetching"&&countdown!==null&&(
+                <span style={{fontSize:10,background:"rgba(67,56,202,.5)",color:"#a5b4fc",padding:"1px 6px",borderRadius:6,fontFamily:"monospace"}}>🔄 {fmtCnt(countdown)}</span>
+              )}
+            </div>
+            <p style={{margin:"2px 0",fontSize:13,fontWeight:700,color:"#818cf8"}}>
+              みずほ銀行 ロト7当選番号
+              {dataLoaded&&<span style={{fontSize:10,color:"#6ee7b7",marginLeft:6}}>✅ {stats.n}回分</span>}
+            </p>
+            <p style={{margin:0,fontSize:10,color:"#475569"}}>
+              {fetchSt==="fetching"?"⏳ 最新データ取得中..."
+                :fetchSt==="error"?`⚠️ 取得失敗（内蔵データ使用）${lastUp?" · "+lastUp.toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"}):""}`
+                :fetchSt==="done"?`✅ ${history.length}回分 · ${lastUp?lastUp.toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"})+" 更新":""}`
+                :`📊 データ読込中... (${history.length}回分)`}
+            </p>
+          </div>
+          <button onClick={()=>{setCountdown(AUTO_MS/1000);loadDataJson().then(h=>fetchLatest(saved,h));}} disabled={fetchSt==="fetching"}
+            style={{marginLeft:8,background:"#4f46e5",color:"#fff",border:"none",borderRadius:10,padding:"8px 12px",fontWeight:700,fontSize:13,cursor:"pointer",opacity:fetchSt==="fetching"?.5:1}}>
+            {fetchSt==="fetching"?<span className="spin">⚙️</span>:"🔄"}
+          </button>
+        </div>
+        {fetchSt!=="fetching"&&countdown!==null&&(
+          <div style={{marginTop:8,background:"rgba(255,255,255,.08)",borderRadius:4,height:2}}>
+            <div style={{height:2,background:"#6366f1",borderRadius:4,transition:"width 1s linear",width:`${((AUTO_MS/1000-countdown)/(AUTO_MS/1000))*100}%`}}/>
+          </div>
+        )}
+      </div>
+
+      {/* タブコンテンツ */}
+      <div style={{padding:"16px 16px 0"}} className="scroll-area">
+
+        {/* 予想タブ */}
+        {tab==="predict"&&(
+          <div>
+            {latest&&(
+              <div style={{background:"rgba(30,27,75,.6)",border:"1px solid rgba(99,102,241,.25)",borderRadius:14,padding:14,marginBottom:14}}>
+                <p style={{margin:"0 0 8px",fontSize:11,color:"#64748b"}}>第{latest.round}回 当選番号 ({latest.date})</p>
+                <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:8}}>
+                  {latest.numbers.map(n=><Ball key={n} num={n} type="main"/>)}
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  <span style={{fontSize:11,color:"#f43f5e",fontWeight:700}}>B</span>
+                  {latest.bonus.map(n=><Ball key={n} num={n} type="bonus" sm/>)}
+                </div>
+              </div>
+            )}
+            <button onClick={generate} disabled={loading}
+              style={{width:"100%",padding:"16px",background:"linear-gradient(135deg,#4f46e5,#7c3aed)",color:"#fff",border:"none",borderRadius:14,fontSize:17,fontWeight:900,cursor:"pointer",marginBottom:16,opacity:loading?.6:1,letterSpacing:"-.01em"}}>
+              {loading?<span><span className="spin">⚙️</span> AI分析中({stats.n}回分)...</span>:`✨ 予想番号を生成する（${stats.n}回分析）`}
+            </button>
+
+            {sets.length>0&&(
+              <div>
+                <p style={{textAlign:"center",fontSize:11,color:"#475569",marginBottom:12}}>── {stats.n}回分データによる4種アルゴリズム予想 ──</p>
+                {sets.map((s,i)=>(
+                  <div key={i} style={{background:TAG_BG[s.tag],border:`1px solid ${TAG_BORDER[s.tag]}`,borderRadius:14,padding:14,marginBottom:12}}>
+                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}>
+                      <span style={{fontSize:12,fontWeight:700,color:TAG_COLOR[s.tag]}}>{s.label}</span>
+                      <span style={{fontSize:10,color:"#334155"}}>セット{i+1}</span>
+                    </div>
+                    <p style={{fontSize:11,color:"#475569",margin:"0 0 10px"}}>{s.desc}</p>
+                    <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:s.bonus?8:0}}>
+                      {s.numbers.map(n=><Ball key={n} num={n} type={s.tag}/>)}
+                    </div>
+                    {s.bonus&&(
+                      <div style={{display:"flex",alignItems:"center",gap:6}}>
+                        <span style={{fontSize:11,color:"#f43f5e",fontWeight:700}}>B予想</span>
+                        {s.bonus.map(n=><Ball key={n} num={n} type="bonus" sm/>)}
+                        <span style={{fontSize:10,color:"#475569"}}>（参考）</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {aiMsg&&(
+                  <div style={{background:"rgba(120,53,15,.2)",border:"1px solid rgba(217,119,6,.3)",borderRadius:14,padding:14,marginBottom:12}}>
+                    <p style={{margin:"0 0 6px",fontSize:11,fontWeight:700,color:"#fbbf24"}}>🤖 AI総合解説（{stats.n}回分析）</p>
+                    <p style={{margin:0,fontSize:12,color:"#e2e8f0",lineHeight:1.7,whiteSpace:"pre-line"}}>{aiMsg}</p>
+                  </div>
+                )}
+                <button onClick={registerSets}
+                  style={{width:"100%",padding:"13px",background:"linear-gradient(135deg,#065f46,#0f766e)",color:"#fff",border:"none",borderRadius:14,fontSize:14,fontWeight:700,cursor:"pointer",marginBottom:6}}>
+                  📌 この4セットを購入番号として登録する
+                </button>
+                <p style={{textAlign:"center",fontSize:10,color:"#334155",marginBottom:4}}>登録すると抽選後に自動で当選チェックします</p>
+                <p style={{textAlign:"center",fontSize:10,color:"#334155",marginBottom:16}}>※予想は統計分析に基づきます。当選を保証するものではありません。</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 購入セットタブ */}
+        {tab==="mysets"&&(
+          <div>
+            {saved?(
+              <>
+                <div style={{background:"rgba(6,78,59,.2)",border:"1px solid rgba(16,185,129,.3)",borderRadius:14,padding:12,marginBottom:14}}>
+                  <p style={{margin:"0 0 2px",fontSize:11,fontWeight:700,color:"#6ee7b7"}}>📌 登録中の購入セット</p>
+                  <p style={{margin:0,fontSize:11,color:"#475569"}}>抽選結果更新時に自動で当選チェックします</p>
+                </div>
+                {saved.map((s,i)=>(
+                  <div key={i} style={{background:TAG_BG[s.tag],border:`1px solid ${TAG_BORDER[s.tag]}`,borderRadius:14,padding:14,marginBottom:12}}>
+                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}>
+                      <span style={{fontSize:12,fontWeight:700,color:TAG_COLOR[s.tag]}}>{s.label}</span>
+                      <span style={{fontSize:10,color:"#334155"}}>セット{i+1}</span>
+                    </div>
+                    <p style={{fontSize:11,color:"#475569",margin:"0 0 10px"}}>{s.desc}</p>
+                    <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:6}}>
+                      {s.numbers.map(n=>{
+                        const isHit=latest?.numbers.includes(n);
+                        return <Ball key={n} num={n} type={s.tag} hl={isHit}/>;
+                      })}
+                    </div>
+                    {latest&&(
+                      <p style={{fontSize:10,color:"#475569",margin:0}}>
+                        最新回(第{latest.round}回)一致: {s.numbers.filter(n=>latest.numbers.includes(n)).length}個
+                        {s.numbers.filter(n=>latest.bonus.includes(n)).length>0?` + ボーナス${s.numbers.filter(n=>latest.bonus.includes(n)).length}個`:""}
+                      </p>
+                    )}
+                  </div>
+                ))}
+                <button onClick={()=>{if(confirm("登録を解除しますか？")){setSaved(null);setAlerts([]);store.del("loto7_saved");}}}
+                  style={{width:"100%",padding:"10px",background:"rgba(51,65,85,.5)",color:"#94a3b8",border:"none",borderRadius:12,fontSize:12,cursor:"pointer",marginBottom:16}}>
+                  🗑️ 登録解除
+                </button>
+              </>
+            ):(
+              <div style={{textAlign:"center",padding:"60px 0",color:"#475569"}}>
+                <div style={{fontSize:40,marginBottom:12}}>📌</div>
+                <p style={{fontSize:14,margin:"0 0 4px"}}>購入セットが登録されていません</p>
+                <p style={{fontSize:11,color:"#334155",margin:"0 0 20px"}}>「予想」タブで番号を生成して登録してください</p>
+                <button onClick={()=>setTab("predict")}
+                  style={{padding:"10px 24px",background:"#4f46e5",color:"#fff",border:"none",borderRadius:12,fontSize:13,fontWeight:700,cursor:"pointer"}}>
+                  予想を生成する →
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 履歴タブ */}
+        {tab==="history"&&(
+          <div>
+            <p style={{fontSize:11,color:"#475569",marginBottom:10}}>過去{history.length}回分の当選番号（第1回〜第{history[0]?.round}回）</p>
+            {history.map(d=>(
+              <div key={d.round} style={{background:"rgba(30,27,75,.5)",border:"1px solid rgba(51,65,85,.5)",borderRadius:14,padding:12,marginBottom:10}}>
+                <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
+                  <span style={{fontSize:12,fontWeight:700,color:"#818cf8"}}>第{d.round}回</span>
+                  <span style={{fontSize:11,color:"#475569"}}>{d.date}</span>
+                </div>
+                <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:6}}>
+                  {d.numbers.map(n=><Ball key={n} num={n} type="main" sm/>)}
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  <span style={{fontSize:10,fontWeight:700,color:"#f43f5e"}}>B</span>
+                  {d.bonus.map(n=><Ball key={n} num={n} type="bonus" sm/>)}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* 統計タブ */}
+        {tab==="stats"&&(
+          <div>
+            {/* データ量バッジ */}
+            <div style={{background:"rgba(67,56,202,.2)",border:"1px solid rgba(99,102,241,.3)",borderRadius:14,padding:12,marginBottom:14,textAlign:"center"}}>
+              <span style={{fontSize:22,fontWeight:900,color:"#a5b4fc"}}>{stats.n}回分</span>
+              <span style={{fontSize:12,color:"#64748b",marginLeft:8}}>のデータで分析</span>
+              <p style={{margin:"4px 0 0",fontSize:10,color:"#334155"}}>第1回(2013/04/05)〜第{history[0]?.round}回({history[0]?.date})</p>
+            </div>
+
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
+              <div style={{background:"rgba(120,53,15,.3)",border:"1px solid rgba(249,115,22,.3)",borderRadius:14,padding:12}}>
+                <p style={{margin:"0 0 8px",fontSize:11,color:"#fb923c",fontWeight:700}}>🔥 よく出る TOP5</p>
+                <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+                  {byFreq.slice(0,5).map(x=>(
+                    <div key={x.num} style={{textAlign:"center"}}>
+                      <Ball num={x.num} type="hot" sm/>
+                      <div style={{fontSize:9,color:"#fb923c",marginTop:2}}>{x.count}回</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div style={{background:"rgba(12,74,110,.3)",border:"1px solid rgba(14,165,233,.25)",borderRadius:14,padding:12}}>
+                <p style={{margin:"0 0 8px",fontSize:11,color:"#38bdf8",fontWeight:700}}>❄️ 出にくい TOP5</p>
+                <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+                  {byFreq.slice(-5).reverse().map(x=>(
+                    <div key={x.num} style={{textAlign:"center"}}>
+                      <Ball num={x.num} type="cold" sm/>
+                      <div style={{fontSize:9,color:"#38bdf8",marginTop:2}}>{x.count}回</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* 直近20回コールド */}
+            <div style={{background:"rgba(30,27,75,.5)",border:"1px solid rgba(51,65,85,.5)",borderRadius:14,padding:14,marginBottom:14}}>
+              <p style={{margin:"0 0 8px",fontSize:11,color:"#64748b"}}>❄️ 直近20回未出現（リバウンド候補）</p>
+              <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+                {Array.from({length:37},(_,i)=>i+1).filter(n=>!stats.recent20.has(n)).map(n=>(
+                  <div key={n} style={{textAlign:"center"}}>
+                    <Ball num={n} type="cold" sm/>
+                  </div>
+                ))}
+                {Array.from({length:37},(_,i)=>i+1).filter(n=>!stats.recent20.has(n)).length===0&&(
+                  <p style={{fontSize:11,color:"#475569"}}>全数字が直近20回以内に出現しています</p>
+                )}
+              </div>
+            </div>
+
+            <div style={{background:"rgba(30,27,75,.5)",border:"1px solid rgba(51,65,85,.5)",borderRadius:14,padding:14,marginBottom:14}}>
+              <p style={{margin:"0 0 10px",fontSize:11,color:"#64748b"}}>📊 出現頻度ランキング（全37数字）</p>
+              {byFreq.map((x,i)=>{
+                const pct=Math.round((x.count/maxF)*100);
+                const type=i<7?"hot":i>=30?"cold":"bal";
+                const bc=type==="hot"?"#f97316":type==="cold"?"#64748b":"#8b5cf6";
+                return(
+                  <div key={x.num} style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
+                    <Ball num={x.num} type={type} sm/>
+                    <div style={{flex:1,background:"rgba(255,255,255,.06)",borderRadius:4,height:6}}>
+                      <div style={{height:6,background:bc,borderRadius:4,width:`${pct}%`}}/>
+                    </div>
+                    <span style={{fontSize:10,color:"#475569",width:36,textAlign:"right"}}>{x.count}回</span>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div style={{background:"rgba(30,27,75,.5)",border:"1px solid rgba(51,65,85,.5)",borderRadius:14,padding:14,marginBottom:14}}>
+              <p style={{margin:"0 0 10px",fontSize:11,color:"#64748b"}}>📈 分析サマリー</p>
+              {[
+                ["分析対象回数",`${stats.n}回（第1〜${history[0]?.round}回）`,"#818cf8"],
+                ["最高頻出番号",`${byFreq[0]?.num}番 (${byFreq[0]?.count}回/${stats.n}回)`,"#fb923c"],
+                ["最低頻出番号",`${byFreq[36]?.num}番 (${byFreq[36]?.count}回/${stats.n}回)`,"#64748b"],
+                ["平均出現回数",`${(stats.n*7/37).toFixed(1)}回`,"#c4b5fd"],
+                ["直近20回コールド",`${37-stats.recent20.size}個`,"#38bdf8"],
+                ["期間",`2013/04/05〜${history[0]?.date}`,"#6ee7b7"],
+              ].map(([k,v,c])=>(
+                <div key={k} style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
+                  <span style={{fontSize:12,color:"#64748b"}}>{k}</span>
+                  <span style={{fontSize:12,fontWeight:700,color:c}}>{v}</span>
+                </div>
+              ))}
+            </div>
+            <p style={{textAlign:"center",fontSize:10,color:"#334155",marginBottom:16}}>※ロト7は完全ランダム抽選です。統計は参考情報です。</p>
+          </div>
+        )}
+      </div>
+
+      {/* ボトムナビ */}
+      <nav className="bottom-nav" style={{background:"rgba(15,14,26,.92)",backdropFilter:"blur(16px)",WebkitBackdropFilter:"blur(16px)",borderTop:"1px solid rgba(99,102,241,.2)"}}>
+        <div style={{display:"flex",justifyContent:"space-around",padding:"10px 0 2px"}}>
+          {tabs.map(t=>(
+            <button key={t.id} onClick={()=>setTab(t.id)}
+              style={{flex:1,background:"none",border:"none",cursor:"pointer",padding:"4px 0 6px",display:"flex",flexDirection:"column",alignItems:"center",gap:2,
+                color:tab===t.id?"#818cf8":"#475569",transition:"color .2s"}}>
+              <span style={{fontSize:22}}>{t.icon}</span>
+              <span style={{fontSize:10,fontWeight:tab===t.id?700:400}}>{t.label}</span>
+              {tab===t.id&&<div style={{width:20,height:2,background:"#6366f1",borderRadius:2}}/>}
+            </button>
+          ))}
+        </div>
+      </nav>
+    </div>
+  );
 }
 
-# 既知の実データ
-KNOWN_DATA = [
-    {"round":681,"date":"2026-06-12","numbers":[1,10,12,13,19,33,35],"bonus":[14,37]},
-    {"round":680,"date":"2026-06-05","numbers":[9,10,22,26,27,31,36],"bonus":[20,29]},
-    {"round":679,"date":"2026-05-29","numbers":[6,8,9,18,22,24,35],"bonus":[4,20]},
-    {"round":678,"date":"2026-05-22","numbers":[2,6,12,15,24,26,34],"bonus":[18,20]},
-    {"round":677,"date":"2026-05-15","numbers":[5,6,7,8,15,17,19],"bonus":[1,33]},
-    {"round":676,"date":"2026-05-08","numbers":[2,6,15,19,20,22,27],"bonus":[31,33]},
-    {"round":675,"date":"2026-05-01","numbers":[5,8,16,18,24,28,31],"bonus":[6,23]},
-    {"round":674,"date":"2026-04-24","numbers":[1,6,7,9,12,22,26],"bonus":[8,14]},
-    {"round":673,"date":"2026-04-17","numbers":[6,9,10,12,16,24,32],"bonus":[17,19]},
-    {"round":672,"date":"2026-04-10","numbers":[7,11,15,16,17,24,33],"bonus":[6,9]},
-    {"round":671,"date":"2026-04-03","numbers":[7,13,16,22,28,33,36],"bonus":[2,25]},
-    {"round":670,"date":"2026-03-27","numbers":[3,4,9,10,18,21,37],"bonus":[15,23]},
-    {"round":669,"date":"2026-03-20","numbers":[3,5,6,7,9,13,16],"bonus":[11,23]},
-    {"round":668,"date":"2026-03-13","numbers":[1,8,11,14,18,22,29],"bonus":[19,35]},
-    {"round":667,"date":"2026-03-06","numbers":[9,13,20,22,28,29,33],"bonus":[21,23]},
-    {"round":666,"date":"2026-02-27","numbers":[2,17,18,22,23,25,33],"bonus":[16,34]},
-    {"round":665,"date":"2026-02-20","numbers":[6,8,14,19,22,25,35],"bonus":[12,17]},
-    {"round":664,"date":"2026-02-13","numbers":[3,6,8,14,21,22,31],"bonus":[17,37]},
-    {"round":663,"date":"2026-02-06","numbers":[4,6,10,11,13,17,23],"bonus":[25,32]},
-    {"round":662,"date":"2026-01-30","numbers":[4,14,15,21,22,24,37],"bonus":[5,20]},
-    {"round":661,"date":"2026-01-23","numbers":[7,12,17,22,31,34,35],"bonus":[20,32]},
-    {"round":660,"date":"2026-01-16","numbers":[4,6,12,13,16,17,31],"bonus":[14,20]},
-    {"round":659,"date":"2026-01-09","numbers":[2,8,9,14,27,34,36],"bonus":[5,18]},
-]
-
-def load_existing_data():
-    try:
-        with open("data.json", "r", encoding="utf-8") as f:
-            data = json.load(f)
-            print(f"✅ 既存data.json: {len(data)}件")
-            return {d["round"]: d for d in data}
-    except:
-        print("📋 data.jsonなし → 既知データで初期化")
-        return {d["round"]: d for d in KNOWN_DATA}
-
-def parse_page(html):
-    """ページからロト7データを解析"""
-    soup = BeautifulSoup(html, "html.parser")
-    results = {}
-
-    tables = soup.find_all("table")
-    for table in tables:
-        rows = table.find_all("tr")
-        for row in rows:
-            cells = row.find_all(["td", "th"])
-            if len(cells) < 9:
-                continue
-
-            texts = [c.get_text(strip=True) for c in cells]
-
-            # 回号
-            round_m = re.search(r'第\s*(\d+)\s*回', texts[0])
-            if not round_m:
-                continue
-
-            # 日付
-            date_m = re.search(r'(\d{4})年(\d{1,2})月(\d{1,2})日', texts[1])
-            if not date_m:
-                continue
-
-            # 本数字（3〜9列目）とボーナス数字（10〜11列目）
-            try:
-                nums = []
-                for t in texts[2:]:
-                    m = re.match(r'^(\d{1,2})$', t)
-                    if m:
-                        n = int(m.group(1))
-                        if 1 <= n <= 37:
-                            nums.append(n)
-
-                if len(nums) >= 9:
-                    rn = int(round_m.group(1))
-                    dt = f"{date_m.group(1)}-{int(date_m.group(2)):02d}-{int(date_m.group(3)):02d}"
-                    results[rn] = {
-                        "round": rn,
-                        "date": dt,
-                        "numbers": sorted(nums[:7]),
-                        "bonus": sorted(nums[7:9])
-                    }
-            except:
-                continue
-
-    return results
-
-def fetch_page(from_r, to_r, session):
-    """1ページ分取得"""
-    url = f"https://www.mizuhobank.co.jp/takarakuji/check/loto/backnumber/detail.html?fromto={from_r}_{to_r}&type=loto7"
-    try:
-        res = session.get(url, timeout=20)
-        if res.status_code == 200:
-            res.encoding = "utf-8"
-            data = parse_page(res.text)
-            if data:
-                print(f"✅ 第{from_r}〜{to_r}回: {len(data)}件")
-            else:
-                print(f"⚠️ 第{from_r}〜{to_r}回: データ解析失敗")
-            return data
-        else:
-            print(f"⚠️ 第{from_r}〜{to_r}回: HTTP {res.status_code}")
-            return {}
-    except Exception as e:
-        print(f"⚠️ 第{from_r}〜{to_r}回: {e}")
-        return {}
-
-def fetch_latest(session):
-    """最新データ取得"""
-    url = "https://www.mizuhobank.co.jp/takarakuji/check/loto/loto7/index.html"
-    try:
-        res = session.get(url, timeout=20)
-        if res.status_code == 200:
-            res.encoding = "utf-8"
-            data = parse_page(res.text)
-            print(f"✅ 最新: {len(data)}件")
-            return data
-        else:
-            print(f"⚠️ 最新: HTTP {res.status_code}")
-            return {}
-    except Exception as e:
-        print(f"⚠️ 最新取得失敗: {e}")
-        return {}
-
-def save_data(merged):
-    sorted_data = sorted(merged.values(), key=lambda x: x["round"], reverse=True)
-
-    with open("data.json", "w", encoding="utf-8") as f:
-        json.dump(sorted_data, f, ensure_ascii=False, indent=2)
-    print(f"✅ data.json: {len(sorted_data)}件保存")
-
-    try:
-        with open("index.html", "r", encoding="utf-8") as f:
-            html = f.read()
-
-        recent = sorted_data[:50]
-        data_str = json.dumps(recent, ensure_ascii=False)
-        new_html = re.sub(
-            r'const SEED_DATA = \[[\s\S]*?\];',
-            f'const SEED_DATA = {data_str};',
-            html, count=1
-        )
-
-        with open("index.html", "w", encoding="utf-8") as f:
-            f.write(new_html)
-        print(f"✅ index.html: 最新{len(recent)}件更新")
-    except Exception as e:
-        print(f"⚠️ index.html更新失敗: {e}")
-
-    latest = sorted_data[0]
-    print(f"\n📊 結果: {len(sorted_data)}件 / 最新:第{latest['round']}回 / 最古:第{sorted_data[-1]['round']}回")
-
-if __name__ == "__main__":
-    print("=" * 50)
-    print("ロト7 全当選番号データ取得")
-    print("=" * 50)
-
-    merged = load_existing_data()
-
-    # セッションを使ってCookieを維持
-    session = requests.Session()
-    session.headers.update(HEADERS)
-
-    # まずトップページにアクセスしてCookieを取得
-    try:
-        top = session.get("https://www.mizuhobank.co.jp/takarakuji/check/loto/backnumber/index.html", timeout=15)
-        print(f"トップページ: HTTP {top.status_code}")
-        time.sleep(1)
-    except:
-        pass
-
-    # 最新データ
-    print("\n--- 最新データ ---")
-    latest = fetch_latest(session)
-    merged.update(latest)
-
-    latest_round = max(merged.keys()) if merged else 681
-    print(f"最新回: 第{latest_round}回")
-
-    # 過去データ（20回ずつ）
-    print("\n--- 過去データ ---")
-    success_count = 0
-    for start in range(1, latest_round + 1, 20):
-        end = min(start + 19, latest_round)
-        block = set(range(start, end + 1))
-        missing = block - set(merged.keys())
-
-        if not missing:
-            print(f"⏭️ 第{start}〜{end}回: スキップ")
-            continue
-
-        data = fetch_page(start, end, session)
-        if data:
-            merged.update(data)
-            success_count += 1
-            time.sleep(1.5)
-        else:
-            time.sleep(0.5)
-
-    print(f"\n取得成功: {success_count}ブロック")
-
-    # 保存
-    print("\n--- 保存 ---")
-    save_data(merged)
-    print("\n✅ 完了！")
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
