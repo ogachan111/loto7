@@ -116,54 +116,60 @@ const calcStats = (history) => {
     }
   });
 
-  return { freq, score, recent20, recent5, bonusFreq, pairFreq, n };
+  // 直近20回のボーナス数字
+  const recentBonus20 = new Set(history.slice(0,20).flatMap(d=>d.bonus));
+
+  return { freq, score, recent20, recent5, bonusFreq, pairFreq, recentBonus20, n };
 };
 
-// ── 予想アルゴリズム（682件対応） ──
+// ── 予想アルゴリズム（682件 × 合計値傾向対応） ──
 const rnd = (arr, n) => [...arr].sort(()=>Math.random()-.5).slice(0,n);
 
-const predictHot = (stats) => {
+// 合計値が目標範囲に入る7個を生成
+const predictWithSum = (stats, targetMin, targetMax, useCold=false) => {
   const sorted = Object.entries(stats.score).map(([n,v])=>({num:+n,score:v})).sort((a,b)=>b.score-a.score);
-  return [...rnd(sorted.slice(0,14),5),...rnd(sorted.slice(14),2)].map(x=>x.num).sort((a,b)=>a-b);
-};
-
-const predictCold = (stats) => {
-  // 直近20回に出ていない数字 = コールド
+  const top20 = sorted.slice(0,20).map(x=>x.num);
   const cold = Array.from({length:37},(_,i)=>i+1).filter(n=>!stats.recent20.has(n));
-  const hot = Object.entries(stats.score).map(([n,v])=>({num:+n,score:v})).sort((a,b)=>b.score-a.score).slice(0,12).map(x=>x.num);
-  const cp = rnd(cold.length>=3?cold:Array.from({length:37},(_,i)=>i+1).filter(n=>!stats.recent5.has(n)),3);
-  return [...cp,...rnd(hot.filter(n=>!cp.includes(n)),4)].sort((a,b)=>a-b);
+  for(let attempt=0; attempt<3000; attempt++){
+    let pick;
+    if(useCold && cold.length >= 2){
+      const coldPick = rnd(cold, 2);
+      const hotPool = top20.filter(n=>!coldPick.includes(n));
+      pick = [...coldPick, ...rnd(hotPool, 5)];
+    } else {
+      pick = rnd(top20, 7);
+    }
+    const s = pick.reduce((a,b)=>a+b, 0);
+    if(s >= targetMin && s <= targetMax) return pick.sort((a,b)=>a-b);
+  }
+  return rnd(sorted.slice(0,15), 7).map(x=>x.num).sort((a,b)=>a-b);
 };
 
-const predictBal = (stats) => {
-  const sorted = Object.entries(stats.score).map(([n,v])=>({num:+n,score:v})).sort((a,b)=>b.score-a.score);
-  // 4分割してバランスよくサンプリング
+// ボーナス数字予想（頻出1個＋コールド1個）
+const predictBonus = (stats, excludeNums) => {
+  const bonusSorted = Object.entries(stats.bonusFreq).map(([n,v])=>({num:+n,score:v})).sort((a,b)=>b.score-a.score);
+  const bonusHot = bonusSorted.slice(0,10).map(x=>x.num).filter(n=>!excludeNums.has(n));
+  const bonusCold = Array.from({length:37},(_,i)=>i+1).filter(n=>!stats.recentBonus20.has(n) && !excludeNums.has(n));
+  const b1 = bonusHot.length>0 ? bonusHot[Math.floor(Math.random()*Math.min(5,bonusHot.length))] : bonusSorted.find(x=>!excludeNums.has(x.num))?.num||14;
+  const pool2 = bonusCold.filter(n=>n!==b1);
+  const b2 = pool2.length>0 ? pool2[Math.floor(Math.random()*pool2.length)] : bonusSorted.filter(x=>!excludeNums.has(x.num)&&x.num!==b1)[0]?.num||20;
+  return [b1,b2].sort((a,b)=>a-b);
+};
+
+const genSets = (stats) => {
+  const s1 = predictWithSum(stats, 126, 136, false);
+  const s2 = predictWithSum(stats, 138, 148, false);
+  const s3 = predictWithSum(stats, 126, 143, true);
+  const s4 = predictWithSum(stats, 129, 137, false);
+  const sum1=s1.reduce((a,b)=>a+b,0), sum2=s2.reduce((a,b)=>a+b,0);
+  const sum3=s3.reduce((a,b)=>a+b,0), sum4=s4.reduce((a,b)=>a+b,0);
   return [
-    ...rnd(sorted.slice(0,9),2),
-    ...rnd(sorted.slice(9,19),2),
-    ...rnd(sorted.slice(19,28),2),
-    ...rnd(sorted.slice(28),1),
-  ].map(x=>x.num).sort((a,b)=>a-b);
+    {label:"🔥 ホット×合計130狙い",    tag:"hot",  desc:`頻出数字で合計${sum1}（682回で出やすい帯126〜136）`,   numbers:s1, bonus:predictBonus(stats,new Set(s1))},
+    {label:"⚖️ バランス×合計143狙い",  tag:"bal",  desc:`バランス重視で合計${sum2}（出やすい帯138〜148）`,      numbers:s2, bonus:predictBonus(stats,new Set(s2))},
+    {label:"❄️ コールド×合計範囲内",   tag:"cold", desc:`直近未出現を混え合計${sum3}（リバウンド狙い）`,         numbers:s3, bonus:predictBonus(stats,new Set(s3))},
+    {label:"🎯 平均合計133狙い",        tag:"con",  desc:`682回平均133.4に近い合計${sum4}を狙う`,               numbers:s4, bonus:predictBonus(stats,new Set(s4))},
+  ];
 };
-
-const predictCon = (stats) => {
-  // 頻出連続ペアを優先
-  const topPairs = Object.entries(stats.pairFreq).sort((a,b)=>b[1]-a[1]).slice(0,5);
-  const pairNums = topPairs.length>0
-    ? topPairs[0][0].split("-").map(Number)
-    : [];
-  const sorted = Object.entries(stats.score).map(([n,v])=>({num:+n,score:v})).sort((a,b)=>b.score-a.score).map(x=>x.num);
-  const used = new Set(pairNums);
-  const rest = rnd(sorted.filter(n=>!used.has(n)), 5);
-  return [...pairNums,...rest].sort((a,b)=>a-b).slice(0,7);
-};
-
-const genSets = (stats) => [
-  {label:"🔥 ホット重視",   tag:"hot",  desc:`直近${stats.n}回の頻出数字を重み付き選出`,          numbers:predictHot(stats)},
-  {label:"❄️ リバウンド",   tag:"cold", desc:`直近20回未出現(${37-stats.recent20.size}個)から厳選`, numbers:predictCold(stats)},
-  {label:"⚖️ バランス型",   tag:"bal",  desc:"頻度帯を4分割して均等サンプリング",                  numbers:predictBal(stats)},
-  {label:"🔗 連続数字型",   tag:"con",  desc:"歴史的頻出連続ペアを軸に構成",                       numbers:predictCon(stats)},
-];
 
 // ── Ball コンポーネント ──
 const BALL_COLORS = {
@@ -436,9 +442,16 @@ function App() {
                       <span style={{fontSize:10,color:"#334155"}}>セット{i+1}</span>
                     </div>
                     <p style={{fontSize:11,color:"#475569",margin:"0 0 10px"}}>{s.desc}</p>
-                    <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+                    <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:s.bonus?8:0}}>
                       {s.numbers.map(n=><Ball key={n} num={n} type={s.tag}/>)}
                     </div>
+                    {s.bonus&&(
+                      <div style={{display:"flex",alignItems:"center",gap:6}}>
+                        <span style={{fontSize:11,color:"#f43f5e",fontWeight:700}}>B予想</span>
+                        {s.bonus.map(n=><Ball key={n} num={n} type="bonus" sm/>)}
+                        <span style={{fontSize:10,color:"#475569"}}>（参考）</span>
+                      </div>
+                    )}
                   </div>
                 ))}
                 {aiMsg&&(
