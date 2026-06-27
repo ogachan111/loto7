@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <title>LOTO7予想アプリ</title>
+
+  <!-- PWA -->
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="LOTO7"/>
+  <meta name="theme-color" content="#1e1b4b"/>
+  <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjggMTI4Ij48cmVjdCB3aWR0aD0iMTI4IiBoZWlnaHQ9IjEyOCIgcng9IjI0IiBmaWxsPSIjMWUxYjRiIi8+PHRleHQgeD0iNjQiIHk9Ijg0IiBmb250LXNpemU9IjcyIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj7wn2mPPC90ZXh0Pjwvc3ZnPg=="/>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+
+  <style>
+    * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+    body { margin: 0; background: #0f0e1a; overscroll-behavior: none; }
+    .safe-top    { padding-top:    env(safe-area-inset-top,    16px); }
+    .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 16px); }
+    .scroll-area { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0;
+                  padding-bottom: env(safe-area-inset-bottom, 0px); z-index: 50; }
+    @keyframes pulse-slow { 0%,100%{opacity:1} 50%{opacity:.6} }
+    .pulse-slow { animation: pulse-slow 2s infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spin { animation: spin .8s linear infinite; display:inline-block; }
+    @keyframes slidein { from{transform:translateY(-20px);opacity:0} to{transform:translateY(0);opacity:1} }
+    .slidein { animation: slidein .4s ease; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script>
+/*__APP__*/
+</script>
+</body>
+</html>
