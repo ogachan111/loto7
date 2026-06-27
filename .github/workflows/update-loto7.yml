@@ -31,6 +31,7 @@ jobs:
         run: pip install requests beautifulsoup4
 
       - name: ロト7当選番号を取得・HTMLを更新
+        id: fetch
         run: python fetch_loto7.py
 
       - name: 変更をGitHubにプッシュ
@@ -42,6 +43,7 @@ jobs:
           git push
 
       - name: 当選チェック・メール通知
+        if: steps.fetch.outputs.new_round == 'true'
         run: python notify_loto7.py
         env:
           GMAIL_USER: ${{ secrets.GMAIL_USER }}

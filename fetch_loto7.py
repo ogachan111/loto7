@@ -2,6 +2,7 @@ import requests
 import re
 import json
 import time
+import os
 
 # みずほ銀行はデータセンターIP（GitHub Actions等）を403でブロックするため、
 # サーバー側で代理取得してくれる Jina AI Reader (r.jina.ai) 経由で取得する。
@@ -142,6 +143,13 @@ if __name__ == "__main__":
         print(f"🆕 新規追加: {', '.join('第'+str(r)+'回' for r in new_rounds)}")
     else:
         print("ℹ️ 新しい回はありませんでした（既存が最新）")
+
+    # GitHub Actionsへ「新しい回があったか」を出力（メール通知の要否判定に使う）
+    gh_out = os.environ.get("GITHUB_OUTPUT")
+    if gh_out:
+        with open(gh_out, "a", encoding="utf-8") as f:
+            f.write(f"new_round={'true' if new_rounds else 'false'}\n")
+            f.write(f"latest_round={max(merged.keys()) if merged else ''}\n")
 
     print("\n--- 保存 ---")
     save_data(merged)
