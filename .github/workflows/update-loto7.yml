@@ -7,6 +7,11 @@ on:
     # 毎週土曜日 09:00 JST (00:00 UTC) ← 念のため再取得
     - cron: '0 0 * * 6'
   workflow_dispatch:  # 手動実行ボタン
+    inputs:
+      test_alert:
+        description: 'true にするとエラー通知メールをテスト送信します'
+        required: false
+        default: 'false'
 
 permissions:
   contents: write
@@ -33,6 +38,8 @@ jobs:
       - name: ロト7当選番号を取得・HTMLを更新
         id: fetch
         run: python fetch_loto7.py
+        env:
+          FORCE_STALE: ${{ github.event.inputs.test_alert == 'true' && '1' || '' }}
 
       - name: 変更をGitHubにプッシュ
         run: |

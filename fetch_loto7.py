@@ -153,7 +153,7 @@ if __name__ == "__main__":
         latest_obj = sorted(merged.values(), key=lambda x: x["round"], reverse=True)[0]
         d = datetime.strptime(latest_obj["date"], "%Y-%m-%d")
         days_old = (datetime.utcnow() - d).days
-        stale = days_old >= 8
+        stale = days_old >= 8 or os.environ.get("FORCE_STALE") == "1"
         print(f"📅 最新回の経過日数: {days_old}日{'  ⚠️ 古い（更新が滞っている可能性）' if stale else ''}")
     except Exception as e:
         stale = True
