@@ -3,6 +3,7 @@ import re
 import json
 import time
 import os
+from datetime import datetime
 
 # みずほ銀行はデータセンターIP（GitHub Actions等）を403でブロックするため、
 # サーバー側で代理取得してくれる Jina AI Reader (r.jina.ai) 経由で取得する。
@@ -144,12 +145,28 @@ if __name__ == "__main__":
     else:
         print("ℹ️ 新しい回はありませんでした（既存が最新）")
 
-    # GitHub Actionsへ「新しい回があったか」を出力（メール通知の要否判定に使う）
+    # データの鮮度チェック（=自動更新が滞っていないか）。ロト7は毎週金曜抽選なので
+    # 最新回の抽選日が8日以上前なら「1サイクル丸ごと取得できていない」とみなす。
+    days_old = ""
+    stale = False
+    try:
+        latest_obj = sorted(merged.values(), key=lambda x: x["round"], reverse=True)[0]
+        d = datetime.strptime(latest_obj["date"], "%Y-%m-%d")
+        days_old = (datetime.utcnow() - d).days
+        stale = days_old >= 8
+        print(f"📅 最新回の経過日数: {days_old}日{'  ⚠️ 古い（更新が滞っている可能性）' if stale else ''}")
+    except Exception as e:
+        stale = True
+        print(f"⚠️ 鮮度チェック失敗: {e}")
+
+    # GitHub Actionsへ出力（メール通知の要否判定に使う）
     gh_out = os.environ.get("GITHUB_OUTPUT")
     if gh_out:
         with open(gh_out, "a", encoding="utf-8") as f:
             f.write(f"new_round={'true' if new_rounds else 'false'}\n")
+            f.write(f"fetch_error={'true' if stale else 'false'}\n")
             f.write(f"latest_round={max(merged.keys()) if merged else ''}\n")
+            f.write(f"days_old={days_old}\n")
 
     print("\n--- 保存 ---")
     save_data(merged)
