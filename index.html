@@ -66,19 +66,31 @@ const judgeGrade = (my, win, bon) => {
   return null;
 };
 
-// ── Claude API ──
-const callClaude = async (prompt, sys) => {
-  const r = await fetch("https://api.anthropic.com/v1/messages",{
-    method:"POST", headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({
-      model:"claude-sonnet-4-6", max_tokens:1000,
-      system: sys||"You are a helpful assistant. Respond in Japanese.",
-      messages:[{role:"user",content:prompt}],
-      tools:[{type:"web_search_20250305",name:"web_search"}],
-    })
+// ── 解説生成（統計ベース・ローカル / AI APIは使わない） ──
+const jnum = (arr) => arr.map(n=>n+"番").join("・");
+const genCommentary = (stats, byFreq, sets) => {
+  const hotTop = new Set(byFreq.slice(0,10).map(x=>x.num));
+  const lines = sets.map((s,i)=>{
+    const sum = s.numbers.reduce((a,b)=>a+b,0);
+    const recent5In = s.numbers.filter(n=>stats.recent5.has(n));
+    const coldIn    = s.numbers.filter(n=>!stats.recent20.has(n));
+    const hotIn     = s.numbers.filter(n=>hotTop.has(n));
+    const sumDesc = sum<126 ? "やや低め" : sum>148 ? "やや高め" : "過去平均帯(約133)";
+    const head =
+      s.tag==="hot"  ? "頻出数字中心のホット型" :
+      s.tag==="bal"  ? "高めの合計を狙うバランス型" :
+      s.tag==="cold" ? "直近未出現を混ぜたリバウンド型" :
+                       "平均合計帯を狙う安定型";
+    let detail = "";
+    if(recent5In.length)  detail += `直近5回でも出た${jnum(recent5In)}を含む。`;
+    else if(hotIn.length) detail += `頻出の${jnum(hotIn.slice(0,3))}を採用。`;
+    if(coldIn.length)     detail += `${jnum(coldIn)}は直近20回未出現のリバウンド候補。`;
+    return `セット${i+1}: ${head}。合計${sum}（${sumDesc}）。${detail}`.trim();
   });
-  const d = await r.json();
-  return d.content.filter(b=>b.type==="text").map(b=>b.text).join("\n");
+  const top3 = byFreq.slice(0,3).map(x=>`${x.num}番(${x.count}回)`).join("・");
+  const coldCount = 37 - stats.recent20.size;
+  const intro = `${stats.n}回分を分析。全期間の頻出は${top3}。直近20回の未出現は${coldCount}個。各セットは合計値が出やすい帯に収まるよう構成しています。`;
+  return intro + "\n\n" + lines.join("\n");
 };
 
 // ── 統計計算（682件対応・重み付きスコア） ──
@@ -261,32 +273,15 @@ function App() {
     return null;
   };
 
-  // ② みずほ銀行から最新データを取得
+  // ② 最新データを再取得（GitHub上のdata.jsonを読み直す。毎週Actionsが自動更新）
   const fetchLatest = async (sv, hist) => {
     setFetchSt("fetching");
-    try {
-      const res = await callClaude(
-        `みずほ銀行のロト7当選番号ページ（https://www.mizuhobank.co.jp/takarakuji/check/loto/loto7/index.html）を参照して最新の当選番号（直近3回分）をJSON配列で返してください。JSON以外不要：[{"round":682,"date":"2026-06-19","numbers":[1,2,3,4,5,6,7],"bonus":[8,9]},...]`,
-        "あなたはロト7当選番号データをJSON形式で返すAIです。web_searchで検索してJSONのみ返してください。"
-      );
-      const m = res.match(/\[[\s\S]*?\]/);
-      if(m){
-        const fetched = JSON.parse(m[0]);
-        if(Array.isArray(fetched) && fetched.length){
-          const base = hist || history;
-          const merged = [...fetched, ...base]
-            .filter((v,i,a)=>a.findIndex(x=>x.round===v.round)===i)
-            .sort((a,b)=>b.round-a.round);
-          setHistory(merged);
-          setFetchSt("done");
-          setLastUp(new Date());
-          setCountdown(AUTO_MS/1000);
-          checkWins(merged, sv!==undefined?sv:saved);
-          return;
-        }
-      }
-      setFetchSt("error"); setLastUp(new Date());
-    } catch(_){
+    const merged = await loadDataJson();
+    if(merged){
+      setFetchSt("done");
+      setCountdown(AUTO_MS/1000);
+      checkWins(merged, sv!==undefined?sv:saved);
+    } else {
       setFetchSt("error"); setLastUp(new Date());
     }
   };
@@ -294,10 +289,7 @@ function App() {
   useEffect(()=>{
     if(!fetched.current){
       fetched.current = true;
-      // まずdata.jsonを読み込んでから最新データを取得
-      loadDataJson().then(hist => {
-        fetchLatest(saved, hist);
-      });
+      fetchLatest(saved);
     }
     intv.current   = setInterval(()=>fetchLatest(null, null), AUTO_MS);
     cntdwn.current = setInterval(()=>setCountdown(p=>p===null?null:p<=1?AUTO_MS/1000:p-1),1000);
@@ -309,20 +301,11 @@ function App() {
   const fmtCnt = s=>s===null?"":`${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`;
 
   // 予想生成
-  const generate = async () => {
-    setLoading(true); setAiMsg(""); setSets([]);
-    const g = genSets(stats); setSets(g);
-    const r3 = history.slice(0,3).map(d=>`第${d.round}回:[${d.numbers.join(",")}]`).join("、");
-    const desc = g.map((s,i)=>`セット${i+1}(${s.label.replace(/[^\w\s]/g,"").trim()}):[${s.numbers.join(",")}]`).join("\n");
-    const topHot = byFreq.slice(0,5).map(x=>`${x.num}番(${x.count}回)`).join(",");
-    const topCold = byFreq.slice(-5).map(x=>`${x.num}番(${x.count}回)`).join(",");
-    try {
-      const c = await callClaude(
-        `ロト7予想4セット生成。分析対象:${stats.n}回分。直近3回:${r3}\n頻出TOP5:${topHot}\n低頻度TOP5:${topCold}\n${desc}\n各セット1〜2文で日本語解説。形式:セット1:〜/セット2:〜/セット3:〜/セット4:〜`,
-        `ロト7統計アドバイザー。${stats.n}回分のデータを分析して端的に日本語で。当選保証なし。`
-      );
-      setAiMsg(c);
-    } catch(_){ setAiMsg(`${stats.n}回分の統計データを基に4種アルゴリズムで予想セットを生成しました。`); }
+  const generate = () => {
+    setLoading(true);
+    const g = genSets(stats);
+    setSets(g);
+    setAiMsg(genCommentary(stats, byFreq, g));
     setLoading(false);
   };
 
@@ -350,7 +333,7 @@ function App() {
         <div style={{textAlign:"center"}}>
           <div style={{fontSize:28,lineHeight:1}}>🎯</div>
           <h1 style={{margin:"4px 0 0",fontSize:18,fontWeight:900,letterSpacing:"-0.02em"}}>LOTO7 <span style={{color:"#a5b4fc"}}>予想アプリ</span></h1>
-          <p style={{margin:"2px 0 0",fontSize:11,color:"#64748b"}}>📊 {stats.n}回分データ × AI分析 × 当選自動チェック</p>
+          <p style={{margin:"2px 0 0",fontSize:11,color:"#64748b"}}>📊 {stats.n}回分データ × 統計分析 × 当選自動チェック</p>
         </div>
       </div>
 
@@ -396,7 +379,7 @@ function App() {
             )}
             <button onClick={generate} disabled={loading}
               style={{width:"100%",padding:"16px",background:"linear-gradient(135deg,#4f46e5,#7c3aed)",color:"#fff",border:"none",borderRadius:14,fontSize:17,fontWeight:900,cursor:"pointer",marginBottom:16,opacity:loading?.6:1,letterSpacing:"-.01em"}}>
-              {loading?<span><span className="spin">⚙️</span> AI分析中({stats.n}回分)...</span>:`✨ 予想番号を生成する（${stats.n}回分析）`}
+              {loading?<span><span className="spin">⚙️</span> 生成中...</span>:`✨ 予想番号を生成する（${stats.n}回分析）`}
             </button>
 
             {sets.length>0&&(
@@ -423,7 +406,7 @@ function App() {
                 ))}
                 {aiMsg&&(
                   <div style={{background:"rgba(120,53,15,.2)",border:"1px solid rgba(217,119,6,.3)",borderRadius:14,padding:14,marginBottom:12}}>
-                    <p style={{margin:"0 0 6px",fontSize:11,fontWeight:700,color:"#fbbf24"}}>🤖 AI総合解説（{stats.n}回分析）</p>
+                    <p style={{margin:"0 0 6px",fontSize:11,fontWeight:700,color:"#fbbf24"}}>🤖 解説（{stats.n}回分析）</p>
                     <p style={{margin:0,fontSize:12,color:"#e2e8f0",lineHeight:1.7,whiteSpace:"pre-line"}}>{aiMsg}</p>
                   </div>
                 )}
