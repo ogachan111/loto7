@@ -72,3 +72,11 @@ jobs:
           REASON: ${{ steps.fetch.outputs.fetch_error == 'true' && 'データが更新されていません（取得失敗・サイト変更の可能性）' || 'ワークフローのいずれかのステップが失敗しました' }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           DAYS_OLD: ${{ steps.fetch.outputs.days_old }}
+
+      - name: トークン期限が近ければ更新を催促（21日前から）
+        if: always()
+        run: python notify_token.py
+        env:
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          NOTIFY_EMAIL: ${{ secrets.NOTIFY_EMAIL }}

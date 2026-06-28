@@ -1,0 +1,43 @@
+name: アプリを自動ビルド（app.jsx→index.html）
+
+# app.jsx（ソース）等を変更してpushすると、CIが index.html を自動生成してコミットする。
+# これで「ローカルで node build.js して手でコミット」が不要になる＝改修も自動化。
+on:
+  push:
+    branches: [main1]
+    paths:
+      - 'app.jsx'
+      - 'index.template.html'
+      - 'build.js'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: チェックアウト
+        uses: actions/checkout@v4
+        with:
+          ref: main1
+
+      - name: Nodeをセットアップ
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: ビルド依存をインストール
+        run: npm install @babel/standalone
+
+      - name: index.html を生成
+        run: node build.js
+
+      - name: 変更があればコミット
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git diff --staged --quiet || git commit -m "🛠️ build: app.jsx → index.html 自動ビルド"
+          git push
