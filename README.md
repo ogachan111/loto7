@@ -40,10 +40,10 @@
 
 ## ビルド方法
 
-`app.jsx`（ロジック）を変更したら再ビルドして `index.html` を更新する:
+`app.jsx`（ロジック）を変更して push すれば、**GitHub Actions（`build.yml`）が自動で `index.html` を生成・コミット**する（手動ビルド不要）。手元で確認したい場合のみ:
 
 ```bash
-npm install @babel/standalone
+npm install @babel/standalone@8.0.3
 node build.js
 ```
 
@@ -70,6 +70,10 @@ GitHub無料cronは最大半日遅延するため、cron-job.org から毎週金
 - ジョブ「loto7 自動更新」: `POST https://api.github.com/repos/ogachan111/loto7/actions/workflows/update-loto7.yml/dispatches`、body `{"ref":"main1"}`
 - ヘッダー: `Authorization: Bearer <PAT>` / `Accept: application/vnd.github+json` / `X-GitHub-Api-Version: 2022-11-28` / `Content-Type: application/json`
 - ⚠️ **トークン「cron-job loto7」の有効期限: 2027-06-26**。失効前に再発行→cron-job.org に貼り直すこと（失効後はGitHubの遅延cronのみで動作継続）。
+- 🔑 **自動催促あり**: 期限21日前から、毎週の更新実行時に `notify_token.py` が更新手順をメール通知する（更新したら同ファイルの `EXPIRY` も書き換える）。
+
+### CIによる自動ビルド（`build.yml`）
+`app.jsx` / `index.template.html` / `build.js` を push すると、Actions が `node build.js` を実行して `index.html` を自動生成・コミットする（babel は 8.0.3 固定で出力安定）。`index.html` の変更では再起動しないのでループしない。
 
 ---
 
