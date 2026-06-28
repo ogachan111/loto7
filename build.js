@@ -35,6 +35,8 @@ const { code } = Babel.transform(jsx, {
   // classic ランタイム = React.createElement を出力（CDNのグローバルReactを使う / import無し）
   presets: [['react', { runtime: 'classic' }]],
   filename: 'app.jsx',
+  // 日本語/絵文字を \uXXXX にエスケープせずUTF-8のまま出力（読みやすさ・出力の安定）
+  generatorOpts: { jsescOption: { minimal: true } },
 });
 
 const out = template.replace('/*__APP__*/', code);
