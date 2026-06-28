@@ -11,7 +11,9 @@ from datetime import datetime
 # (tokaikensyo.com・Akamai非保護) をフォールバック源として多段化している。
 MIZUHO_URL = "https://www.mizuhobank.co.jp/takarakuji/check/loto/loto7/index.html"
 JINA_URL = "https://r.jina.ai/" + MIZUHO_URL
-TOKAI_URL = "https://tokaikensyo.com/campaignwinning/loto7/"  # フォールバック（最新回のみ）
+# フォールバック源（いずれもAkamai非保護で直接取得可）
+OHTASHP_URL = "https://www.ohtashp.com/topics/takarakuji/loto7/"  # 全回の一覧表（構造化・堅牢）
+TOKAI_URL = "https://tokaikensyo.com/campaignwinning/loto7/"      # 最新回のみ（個人ブログ）
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
@@ -128,8 +130,50 @@ def fetch_jina():
     return {}
 
 
+def parse_ohtashp(html):
+    """ohtashp.com の一覧表（フォールバック）を解析する。
+    タグ除去後はこんな並び（全回・降順）：
+        第683回 2026/6/26 11 21 22 25 28 29 36 08 32 2 4億4,758万円 0円
+    日付の後ろに本数字7個＋ボーナス2個の計9個が並ぶ。
+    """
+    text = re.sub(r'<[^>]+>', ' ', html)
+    text = text.replace('&nbsp;', ' ')
+    text = re.sub(r'\s+', ' ', text)
+    results = {}
+    for m in re.finditer(
+            r'第(\d+)回\s+(\d{4})/(\d{1,2})/(\d{1,2})\s+((?:\d{1,2}\s+){8}\d{1,2})', text):
+        nums = [int(x) for x in m.group(5).split()]
+        if len(nums) != 9 or any(n < 1 or n > 37 for n in nums):
+            continue
+        rn = int(m.group(1))
+        dt = f"{m.group(2)}-{int(m.group(3)):02d}-{int(m.group(4)):02d}"
+        results[rn] = {"round": rn, "date": dt,
+                       "numbers": sorted(nums[:7]), "bonus": sorted(nums[7:9])}
+    return results
+
+
+def fetch_ohtashp():
+    """フォールバック1: ohtashp.com の一覧表を直接取得（Jina非依存・全回）。"""
+    for attempt in range(1, 3):
+        try:
+            res = requests.get(OHTASHP_URL, headers=HEADERS, timeout=30)
+            if res.status_code == 200:
+                res.encoding = res.apparent_encoding or "utf-8"
+                data = parse_ohtashp(res.text)
+                if data:
+                    print(f"✅ [ohtashp] フォールバック取得: {len(data)}件（第{min(data)}〜{max(data)}回）")
+                    return data
+                print(f"⚠️ [ohtashp] 取得できたが解析0件（試行{attempt}）")
+            else:
+                print(f"⚠️ [ohtashp] HTTP {res.status_code}（試行{attempt}）")
+        except Exception as e:
+            print(f"⚠️ [ohtashp] 取得失敗（試行{attempt}）: {e}")
+        time.sleep(3)
+    return {}
+
+
 def fetch_tokai():
-    """フォールバック: tokaikensyo.com を直接取得（Jina非依存・Akamai非保護）。最新回のみ。"""
+    """フォールバック2: tokaikensyo.com を直接取得（Jina非依存・Akamai非保護）。最新回のみ。"""
     for attempt in range(1, 3):
         try:
             res = requests.get(TOKAI_URL, headers=HEADERS, timeout=30)
@@ -149,16 +193,20 @@ def fetch_tokai():
 
 
 def fetch_latest():
-    """主(Jina)→ダメならフォールバック(tokai)の順で最新データを取得。"""
-    # テスト用: FORCE_FALLBACK=1 で主をスキップしフォールバックを検証できる
+    """主(Jina)→フォールバック(ohtashp→tokai)の順で最新データを取得。
+    最初に取得できた経路の結果を返す（3段の多重化）。"""
+    sources = [("Jina", fetch_jina), ("ohtashp", fetch_ohtashp), ("tokai", fetch_tokai)]
+    # テスト用: FORCE_FALLBACK=1 で主(Jina)をスキップしフォールバックを検証できる
     if os.environ.get("FORCE_FALLBACK") == "1":
-        print("🧪 FORCE_FALLBACK=1 → Jinaをスキップしてフォールバックを試行")
-    else:
-        data = fetch_jina()
+        print("🧪 FORCE_FALLBACK=1 → 主(Jina)をスキップ")
+        sources = sources[1:]
+    for name, fn in sources:
+        data = fn()
         if data:
             return data
-        print("⚠️ 主(Jina)が取得できず → フォールバックへ切替")
-    return fetch_tokai()
+        print(f"⚠️ [{name}] 取得できず → 次の経路へ")
+    print("❌ すべての経路で取得失敗")
+    return {}
 
 
 def save_data(merged):
@@ -190,11 +238,10 @@ def save_data(merged):
 
 if __name__ == "__main__":
     print("=" * 50)
-    print("ロト7 当選番号取得（Jina AI Reader経由）")
+    print("ロト7 当選番号取得（Jina主＋フォールバック3段）")
     print("=" * 50)
 
     merged = load_existing_data()
-    before_latest = max(merged.keys()) if merged else 0
 
     print("\n--- 最新データ取得 ---")
     latest = fetch_latest()
