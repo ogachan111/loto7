@@ -736,7 +736,7 @@ function App() {
       fontSize: 28,
       lineHeight: 1
     }
-  }, "\uD83C\uDFAF"), /*#__PURE__*/React.createElement("h1", {
+  }, "🎯"), /*#__PURE__*/React.createElement("h1", {
     style: {
       margin: "4px 0 0",
       fontSize: 18,
@@ -747,13 +747,13 @@ function App() {
     style: {
       color: "#a5b4fc"
     }
-  }, "\u4E88\u60F3\u30A2\u30D7\u30EA")), /*#__PURE__*/React.createElement("p", {
+  }, "予想アプリ")), /*#__PURE__*/React.createElement("p", {
     style: {
       margin: "2px 0 0",
       fontSize: 11,
       color: "#64748b"
     }
-  }, "\uD83D\uDCCA ", stats.n, "\u56DE\u5206\u30C7\u30FC\u30BF \xD7 \u7D71\u8A08\u5206\u6790 \xD7 \u5F53\u9078\u81EA\u52D5\u30C1\u30A7\u30C3\u30AF"))), alerts.length > 0 && /*#__PURE__*/React.createElement("div", {
+  }, "📊 ", stats.n, "回分データ × 統計分析 × 当選自動チェック"))), alerts.length > 0 && /*#__PURE__*/React.createElement("div", {
     style: {
       padding: "12px 16px 0"
     },
@@ -786,13 +786,13 @@ function App() {
       fontSize: 11,
       color: "#cbd5e1"
     }
-  }, "\u7B2C", a.round, "\u56DE (", a.date, ")")), /*#__PURE__*/React.createElement("p", {
+  }, "第", a.round, "回 (", a.date, ")")), /*#__PURE__*/React.createElement("p", {
     style: {
       fontSize: 12,
       color: "#e2e8f0",
       marginBottom: 8
     }
-  }, a.setLabel, " \u304C\u5F53\u9078\uFF01"), /*#__PURE__*/React.createElement("div", {
+  }, a.setLabel, " が当選！"), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       flexWrap: "wrap",
@@ -810,7 +810,7 @@ function App() {
       fontSize: 10,
       color: "#94a3b8"
     }
-  }, "\u9EC4\u8272 = \u672C\u6570\u5B57\u4E00\u81F4"))), /*#__PURE__*/React.createElement("button", {
+  }, "黄色 = 本数字一致"))), /*#__PURE__*/React.createElement("button", {
     onClick: () => setAlerts([]),
     style: {
       width: "100%",
@@ -821,7 +821,7 @@ function App() {
       fontSize: 12,
       cursor: "pointer"
     }
-  }, "\u9589\u3058\u308B \xD7")), /*#__PURE__*/React.createElement("div", {
+  }, "閉じる ×")), /*#__PURE__*/React.createElement("div", {
     style: {
       padding: "16px 16px 0"
     },
@@ -840,7 +840,7 @@ function App() {
       fontSize: 11,
       color: "#64748b"
     }
-  }, "\u7B2C", latest.round, "\u56DE \u5F53\u9078\u756A\u53F7 (", latest.date, ")"), /*#__PURE__*/React.createElement("div", {
+  }, "第", latest.round, "回 当選番号 (", latest.date, ")"), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       flexWrap: "wrap",
@@ -887,14 +887,14 @@ function App() {
     }
   }, loading ? /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("span", {
     className: "spin"
-  }, "\u2699\uFE0F"), " \u751F\u6210\u4E2D...") : `✨ 予想番号を生成する（${stats.n}回分析）`), sets.length > 0 && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("p", {
+  }, "⚙️"), " 生成中...") : `✨ 予想番号を生成する（${stats.n}回分析）`), sets.length > 0 && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("p", {
     style: {
       textAlign: "center",
       fontSize: 11,
       color: "#475569",
       marginBottom: 12
     }
-  }, "\u2500\u2500 ", stats.n, "\u56DE\u5206\u30C7\u30FC\u30BF\u306B\u3088\u308B4\u7A2E\u30A2\u30EB\u30B4\u30EA\u30BA\u30E0\u4E88\u60F3 \u2500\u2500"), sets.map((s, i) => /*#__PURE__*/React.createElement("div", {
+  }, "── ", stats.n, "回分データによる4種アルゴリズム予想 ──"), sets.map((s, i) => /*#__PURE__*/React.createElement("div", {
     key: i,
     style: {
       background: TAG_BG[s.tag],
@@ -920,7 +920,7 @@ function App() {
       fontSize: 10,
       color: "#334155"
     }
-  }, "\u30BB\u30C3\u30C8", i + 1)), /*#__PURE__*/React.createElement("p", {
+  }, "セット", i + 1)), /*#__PURE__*/React.createElement("p", {
     style: {
       fontSize: 11,
       color: "#475569",
@@ -949,7 +949,7 @@ function App() {
       color: "#f43f5e",
       fontWeight: 700
     }
-  }, "B\u4E88\u60F3"), s.bonus.map(n => /*#__PURE__*/React.createElement(Ball, {
+  }, "B予想"), s.bonus.map(n => /*#__PURE__*/React.createElement(Ball, {
     key: n,
     num: n,
     type: "bonus",
@@ -959,7 +959,7 @@ function App() {
       fontSize: 10,
       color: "#475569"
     }
-  }, "\uFF08\u53C2\u8003\uFF09")))), aiMsg && /*#__PURE__*/React.createElement("div", {
+  }, "（参考）")))), aiMsg && /*#__PURE__*/React.createElement("div", {
     style: {
       background: "rgba(120,53,15,.2)",
       border: "1px solid rgba(217,119,6,.3)",
@@ -974,7 +974,7 @@ function App() {
       fontWeight: 700,
       color: "#fbbf24"
     }
-  }, "\uD83E\uDD16 \u89E3\u8AAC\uFF08", stats.n, "\u56DE\u5206\u6790\uFF09"), /*#__PURE__*/React.createElement("p", {
+  }, "🤖 解説（", stats.n, "回分析）"), /*#__PURE__*/React.createElement("p", {
     style: {
       margin: 0,
       fontSize: 12,
@@ -996,21 +996,21 @@ function App() {
       cursor: "pointer",
       marginBottom: 6
     }
-  }, "\uD83D\uDCCC \u3053\u306E4\u30BB\u30C3\u30C8\u3092\u8CFC\u5165\u756A\u53F7\u3068\u3057\u3066\u767B\u9332\u3059\u308B"), /*#__PURE__*/React.createElement("p", {
+  }, "📌 この4セットを購入番号として登録する"), /*#__PURE__*/React.createElement("p", {
     style: {
       textAlign: "center",
       fontSize: 10,
       color: "#334155",
       marginBottom: 4
     }
-  }, "\u767B\u9332\u3059\u308B\u3068\u62BD\u9078\u5F8C\u306B\u81EA\u52D5\u3067\u5F53\u9078\u30C1\u30A7\u30C3\u30AF\u3057\u307E\u3059"), /*#__PURE__*/React.createElement("p", {
+  }, "登録すると抽選後に自動で当選チェックします"), /*#__PURE__*/React.createElement("p", {
     style: {
       textAlign: "center",
       fontSize: 10,
       color: "#334155",
       marginBottom: 16
     }
-  }, "\u203B\u4E88\u60F3\u306F\u7D71\u8A08\u5206\u6790\u306B\u57FA\u3065\u304D\u307E\u3059\u3002\u5F53\u9078\u3092\u4FDD\u8A3C\u3059\u308B\u3082\u306E\u3067\u306F\u3042\u308A\u307E\u305B\u3093\u3002"))), tab === "mysets" && /*#__PURE__*/React.createElement("div", null, saved ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+  }, "※予想は統計分析に基づきます。当選を保証するものではありません。"))), tab === "mysets" && /*#__PURE__*/React.createElement("div", null, saved ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     style: {
       background: "rgba(6,78,59,.2)",
       border: "1px solid rgba(16,185,129,.3)",
@@ -1025,13 +1025,13 @@ function App() {
       fontWeight: 700,
       color: "#6ee7b7"
     }
-  }, "\uD83D\uDCCC \u767B\u9332\u4E2D\u306E\u8CFC\u5165\u30BB\u30C3\u30C8"), /*#__PURE__*/React.createElement("p", {
+  }, "📌 登録中の購入セット"), /*#__PURE__*/React.createElement("p", {
     style: {
       margin: 0,
       fontSize: 11,
       color: "#475569"
     }
-  }, "\u62BD\u9078\u7D50\u679C\u66F4\u65B0\u6642\u306B\u81EA\u52D5\u3067\u5F53\u9078\u30C1\u30A7\u30C3\u30AF\u3057\u307E\u3059")), saved.map((s, i) => /*#__PURE__*/React.createElement("div", {
+  }, "抽選結果更新時に自動で当選チェックします")), saved.map((s, i) => /*#__PURE__*/React.createElement("div", {
     key: i,
     style: {
       background: TAG_BG[s.tag],
@@ -1057,7 +1057,7 @@ function App() {
       fontSize: 10,
       color: "#334155"
     }
-  }, "\u30BB\u30C3\u30C8", i + 1)), /*#__PURE__*/React.createElement("p", {
+  }, "セット", i + 1)), /*#__PURE__*/React.createElement("p", {
     style: {
       fontSize: 11,
       color: "#475569",
@@ -1084,7 +1084,7 @@ function App() {
       color: "#475569",
       margin: 0
     }
-  }, "\u6700\u65B0\u56DE(\u7B2C", latest.round, "\u56DE)\u4E00\u81F4: ", s.numbers.filter(n => latest.numbers.includes(n)).length, "\u500B", s.numbers.filter(n => latest.bonus.includes(n)).length > 0 ? ` + ボーナス${s.numbers.filter(n => latest.bonus.includes(n)).length}個` : ""))), /*#__PURE__*/React.createElement("button", {
+  }, "最新回(第", latest.round, "回)一致: ", s.numbers.filter(n => latest.numbers.includes(n)).length, "個", s.numbers.filter(n => latest.bonus.includes(n)).length > 0 ? ` + ボーナス${s.numbers.filter(n => latest.bonus.includes(n)).length}個` : ""))), /*#__PURE__*/React.createElement("button", {
     onClick: () => {
       if (confirm("登録を解除しますか？")) {
         setSaved(null);
@@ -1103,7 +1103,7 @@ function App() {
       cursor: "pointer",
       marginBottom: 16
     }
-  }, "\uD83D\uDDD1\uFE0F \u767B\u9332\u89E3\u9664")) : /*#__PURE__*/React.createElement("div", {
+  }, "🗑️ 登録解除")) : /*#__PURE__*/React.createElement("div", {
     style: {
       textAlign: "center",
       padding: "60px 0",
@@ -1114,18 +1114,18 @@ function App() {
       fontSize: 40,
       marginBottom: 12
     }
-  }, "\uD83D\uDCCC"), /*#__PURE__*/React.createElement("p", {
+  }, "📌"), /*#__PURE__*/React.createElement("p", {
     style: {
       fontSize: 14,
       margin: "0 0 4px"
     }
-  }, "\u8CFC\u5165\u30BB\u30C3\u30C8\u304C\u767B\u9332\u3055\u308C\u3066\u3044\u307E\u305B\u3093"), /*#__PURE__*/React.createElement("p", {
+  }, "購入セットが登録されていません"), /*#__PURE__*/React.createElement("p", {
     style: {
       fontSize: 11,
       color: "#334155",
       margin: "0 0 20px"
     }
-  }, "\u300C\u4E88\u60F3\u300D\u30BF\u30D6\u3067\u756A\u53F7\u3092\u751F\u6210\u3057\u3066\u767B\u9332\u3057\u3066\u304F\u3060\u3055\u3044"), /*#__PURE__*/React.createElement("button", {
+  }, "「予想」タブで番号を生成して登録してください"), /*#__PURE__*/React.createElement("button", {
     onClick: () => setTab("predict"),
     style: {
       padding: "10px 24px",
@@ -1137,13 +1137,13 @@ function App() {
       fontWeight: 700,
       cursor: "pointer"
     }
-  }, "\u4E88\u60F3\u3092\u751F\u6210\u3059\u308B \u2192"))), tab === "history" && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("p", {
+  }, "予想を生成する →"))), tab === "history" && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("p", {
     style: {
       fontSize: 11,
       color: "#475569",
       marginBottom: 10
     }
-  }, "\u904E\u53BB", history.length, "\u56DE\u5206\u306E\u5F53\u9078\u756A\u53F7\uFF08\u7B2C1\u56DE\u301C\u7B2C", history[0]?.round, "\u56DE\uFF09"), history.map(d => /*#__PURE__*/React.createElement("div", {
+  }, "過去", history.length, "回分の当選番号（第1回〜第", history[0]?.round, "回）"), history.map(d => /*#__PURE__*/React.createElement("div", {
     key: d.round,
     style: {
       background: "rgba(30,27,75,.5)",
@@ -1164,7 +1164,7 @@ function App() {
       fontWeight: 700,
       color: "#818cf8"
     }
-  }, "\u7B2C", d.round, "\u56DE"), /*#__PURE__*/React.createElement("span", {
+  }, "第", d.round, "回"), /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 11,
       color: "#475569"
@@ -1213,19 +1213,19 @@ function App() {
       fontWeight: 900,
       color: "#a5b4fc"
     }
-  }, stats.n, "\u56DE\u5206"), /*#__PURE__*/React.createElement("span", {
+  }, stats.n, "回分"), /*#__PURE__*/React.createElement("span", {
     style: {
       fontSize: 12,
       color: "#64748b",
       marginLeft: 8
     }
-  }, "\u306E\u30C7\u30FC\u30BF\u3067\u5206\u6790"), /*#__PURE__*/React.createElement("p", {
+  }, "のデータで分析"), /*#__PURE__*/React.createElement("p", {
     style: {
       margin: "4px 0 0",
       fontSize: 10,
       color: "#334155"
     }
-  }, "\u7B2C1\u56DE(2013/04/05)\u301C\u7B2C", history[0]?.round, "\u56DE(", history[0]?.date, ")")), /*#__PURE__*/React.createElement("div", {
+  }, "第1回(2013/04/05)〜第", history[0]?.round, "回(", history[0]?.date, ")")), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
       gridTemplateColumns: "1fr 1fr",
@@ -1246,7 +1246,7 @@ function App() {
       color: "#fb923c",
       fontWeight: 700
     }
-  }, "\uD83D\uDD25 \u3088\u304F\u51FA\u308B TOP5"), /*#__PURE__*/React.createElement("div", {
+  }, "🔥 よく出る TOP5"), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       flexWrap: "wrap",
@@ -1267,7 +1267,7 @@ function App() {
       color: "#fb923c",
       marginTop: 2
     }
-  }, x.count, "\u56DE"))))), /*#__PURE__*/React.createElement("div", {
+  }, x.count, "回"))))), /*#__PURE__*/React.createElement("div", {
     style: {
       background: "rgba(12,74,110,.3)",
       border: "1px solid rgba(14,165,233,.25)",
@@ -1281,7 +1281,7 @@ function App() {
       color: "#38bdf8",
       fontWeight: 700
     }
-  }, "\u2744\uFE0F \u51FA\u306B\u304F\u3044 TOP5"), /*#__PURE__*/React.createElement("div", {
+  }, "❄️ 出にくい TOP5"), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       flexWrap: "wrap",
@@ -1302,7 +1302,7 @@ function App() {
       color: "#38bdf8",
       marginTop: 2
     }
-  }, x.count, "\u56DE")))))), /*#__PURE__*/React.createElement("div", {
+  }, x.count, "回")))))), /*#__PURE__*/React.createElement("div", {
     style: {
       background: "rgba(30,27,75,.5)",
       border: "1px solid rgba(51,65,85,.5)",
@@ -1316,7 +1316,7 @@ function App() {
       fontSize: 11,
       color: "#64748b"
     }
-  }, "\u2744\uFE0F \u76F4\u8FD120\u56DE\u672A\u51FA\u73FE\uFF08\u30EA\u30D0\u30A6\u30F3\u30C9\u5019\u88DC\uFF09"), /*#__PURE__*/React.createElement("div", {
+  }, "❄️ 直近20回未出現（リバウンド候補）"), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       flexWrap: "wrap",
@@ -1340,7 +1340,7 @@ function App() {
       fontSize: 11,
       color: "#475569"
     }
-  }, "\u5168\u6570\u5B57\u304C\u76F4\u8FD120\u56DE\u4EE5\u5185\u306B\u51FA\u73FE\u3057\u3066\u3044\u307E\u3059"))), /*#__PURE__*/React.createElement("div", {
+  }, "全数字が直近20回以内に出現しています"))), /*#__PURE__*/React.createElement("div", {
     style: {
       background: "rgba(30,27,75,.5)",
       border: "1px solid rgba(51,65,85,.5)",
@@ -1354,7 +1354,7 @@ function App() {
       fontSize: 11,
       color: "#64748b"
     }
-  }, "\uD83D\uDCCA \u51FA\u73FE\u983B\u5EA6\u30E9\u30F3\u30AD\u30F3\u30B0\uFF08\u516837\u6570\u5B57\uFF09"), byFreq.map((x, i) => {
+  }, "📊 出現頻度ランキング（全37数字）"), byFreq.map((x, i) => {
     const pct = Math.round(x.count / maxF * 100);
     const type = i < 7 ? "hot" : i >= 30 ? "cold" : "bal";
     const bc = type === "hot" ? "#f97316" : type === "cold" ? "#64748b" : "#8b5cf6";
@@ -1391,7 +1391,7 @@ function App() {
         width: 36,
         textAlign: "right"
       }
-    }, x.count, "\u56DE"));
+    }, x.count, "回"));
   })), /*#__PURE__*/React.createElement("div", {
     style: {
       background: "rgba(30,27,75,.5)",
@@ -1406,7 +1406,7 @@ function App() {
       fontSize: 11,
       color: "#64748b"
     }
-  }, "\uD83D\uDCC8 \u5206\u6790\u30B5\u30DE\u30EA\u30FC"), [["分析対象回数", `${stats.n}回（第1〜${history[0]?.round}回）`, "#818cf8"], ["最高頻出番号", `${byFreq[0]?.num}番 (${byFreq[0]?.count}回/${stats.n}回)`, "#fb923c"], ["最低頻出番号", `${byFreq[36]?.num}番 (${byFreq[36]?.count}回/${stats.n}回)`, "#64748b"], ["平均出現回数", `${(stats.n * 7 / 37).toFixed(1)}回`, "#c4b5fd"], ["直近20回コールド", `${37 - stats.recent20.size}個`, "#38bdf8"], ["期間", `2013/04/05〜${history[0]?.date}`, "#6ee7b7"]].map(([k, v, c]) => /*#__PURE__*/React.createElement("div", {
+  }, "📈 分析サマリー"), [["分析対象回数", `${stats.n}回（第1〜${history[0]?.round}回）`, "#818cf8"], ["最高頻出番号", `${byFreq[0]?.num}番 (${byFreq[0]?.count}回/${stats.n}回)`, "#fb923c"], ["最低頻出番号", `${byFreq[36]?.num}番 (${byFreq[36]?.count}回/${stats.n}回)`, "#64748b"], ["平均出現回数", `${(stats.n * 7 / 37).toFixed(1)}回`, "#c4b5fd"], ["直近20回コールド", `${37 - stats.recent20.size}個`, "#38bdf8"], ["期間", `2013/04/05〜${history[0]?.date}`, "#6ee7b7"]].map(([k, v, c]) => /*#__PURE__*/React.createElement("div", {
     key: k,
     style: {
       display: "flex",
@@ -1431,7 +1431,7 @@ function App() {
       color: "#334155",
       marginBottom: 16
     }
-  }, "\u203B\u30ED\u30C87\u306F\u5B8C\u5168\u30E9\u30F3\u30C0\u30E0\u62BD\u9078\u3067\u3059\u3002\u7D71\u8A08\u306F\u53C2\u8003\u60C5\u5831\u3067\u3059\u3002"))), /*#__PURE__*/React.createElement("nav", {
+  }, "※ロト7は完全ランダム抽選です。統計は参考情報です。"))), /*#__PURE__*/React.createElement("nav", {
     className: "bottom-nav",
     style: {
       background: "rgba(15,14,26,.92)",
