@@ -96,8 +96,28 @@ const calcStats = (history) => {
   return { freq, score, recent20, recent5, bonusFreq, pairFreq, recentBonus20, n };
 };
 
-// ── 予想アルゴリズム（682件 × 合計値傾向対応） ──
-const rnd = (arr, n) => [...arr].sort(()=>Math.random()-.5).slice(0,n);
+// ── 予想アルゴリズム（合計値傾向対応・確定予想） ──
+// シード付き乱数。同じシード（=同じ回）なら毎回まったく同じ結果になり、
+// 「生成」を押すたびに番号がコロコロ変わらない（次回抽選まで固定）。
+let RNG = Math.random;
+const mulberry32 = (seed) => {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+};
+// RNG を使った安定シャッフル（Fisher–Yates）
+const rnd = (arr, n) => {
+  const a = [...arr];
+  for(let i=a.length-1; i>0; i--){
+    const j = Math.floor(RNG() * (i+1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a.slice(0, n);
+};
 
 // 合計値が目標範囲に入る7個を生成
 const predictWithSum = (stats, targetMin, targetMax, useCold=false) => {
@@ -124,13 +144,15 @@ const predictBonus = (stats, excludeNums) => {
   const bonusSorted = Object.entries(stats.bonusFreq).map(([n,v])=>({num:+n,score:v})).sort((a,b)=>b.score-a.score);
   const bonusHot = bonusSorted.slice(0,10).map(x=>x.num).filter(n=>!excludeNums.has(n));
   const bonusCold = Array.from({length:37},(_,i)=>i+1).filter(n=>!stats.recentBonus20.has(n) && !excludeNums.has(n));
-  const b1 = bonusHot.length>0 ? bonusHot[Math.floor(Math.random()*Math.min(5,bonusHot.length))] : bonusSorted.find(x=>!excludeNums.has(x.num))?.num||14;
+  const b1 = bonusHot.length>0 ? bonusHot[Math.floor(RNG()*Math.min(5,bonusHot.length))] : bonusSorted.find(x=>!excludeNums.has(x.num))?.num||14;
   const pool2 = bonusCold.filter(n=>n!==b1);
-  const b2 = pool2.length>0 ? pool2[Math.floor(Math.random()*pool2.length)] : bonusSorted.filter(x=>!excludeNums.has(x.num)&&x.num!==b1)[0]?.num||20;
+  const b2 = pool2.length>0 ? pool2[Math.floor(RNG()*pool2.length)] : bonusSorted.filter(x=>!excludeNums.has(x.num)&&x.num!==b1)[0]?.num||20;
   return [b1,b2].sort((a,b)=>a-b);
 };
 
-const genSets = (stats) => {
+const genSets = (stats, seed) => {
+  // 同じ回(seed)なら毎回同じ4セットになるよう乱数を固定
+  RNG = mulberry32((seed || 0) + 1);
   const s1 = predictWithSum(stats, 126, 136, false);
   const s2 = predictWithSum(stats, 138, 148, false);
   const s3 = predictWithSum(stats, 126, 143, true);
@@ -265,7 +287,8 @@ function App() {
   // 予想生成
   const generate = () => {
     setLoading(true);
-    const g = genSets(stats);
+    // 最新回の番号をシードに → 同じ回なら毎回同じ4セット（次回抽選まで固定）
+    const g = genSets(stats, history[0]?.round || 0);
     setSets(g);
     setAiMsg(genCommentary(stats, byFreq, g));
     setLoading(false);
@@ -377,6 +400,7 @@ function App() {
                   📌 この4セットを購入番号として登録する
                 </button>
                 <p style={{textAlign:"center",fontSize:10,color:"#334155",marginBottom:4}}>登録すると抽選後に自動で当選チェックします</p>
+                <p style={{textAlign:"center",fontSize:10,color:"#475569",marginBottom:4}}>🔒 この予想は次回抽選まで固定です（何度押しても同じ番号）</p>
                 <p style={{textAlign:"center",fontSize:10,color:"#334155",marginBottom:16}}>※予想は統計分析に基づきます。当選を保証するものではありません。</p>
               </div>
             )}
