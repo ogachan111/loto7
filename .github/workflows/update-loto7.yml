@@ -12,6 +12,10 @@ on:
         description: 'true にするとエラー通知メールをテスト送信します'
         required: false
         default: 'false'
+      test_fallback:
+        description: 'true にすると主(Jina)をスキップしフォールバック取得を検証します'
+        required: false
+        default: 'false'
 
 permissions:
   contents: write
@@ -40,6 +44,7 @@ jobs:
         run: python fetch_loto7.py
         env:
           FORCE_STALE: ${{ github.event.inputs.test_alert == 'true' && '1' || '' }}
+          FORCE_FALLBACK: ${{ github.event.inputs.test_fallback == 'true' && '1' || '' }}
 
       - name: 変更をGitHubにプッシュ
         run: |

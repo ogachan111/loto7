@@ -5,10 +5,13 @@ import time
 import os
 from datetime import datetime
 
-# みずほ銀行はデータセンターIP（GitHub Actions等）を403でブロックするため、
-# サーバー側で代理取得してくれる Jina AI Reader (r.jina.ai) 経由で取得する。
+# みずほ銀行はAkamaiでデータセンターIP（GitHub Actions等）も住宅IPの素のHTTPも
+# 403でブロックする。ブラウザ描画する Jina AI Reader (r.jina.ai) だけが通る。
+# Jinaが落ちた/レート制限/仕様変更でも止まらないよう、別インフラの直接取得サイト
+# (tokaikensyo.com・Akamai非保護) をフォールバック源として多段化している。
 MIZUHO_URL = "https://www.mizuhobank.co.jp/takarakuji/check/loto/loto7/index.html"
 JINA_URL = "https://r.jina.ai/" + MIZUHO_URL
+TOKAI_URL = "https://tokaikensyo.com/campaignwinning/loto7/"  # フォールバック（最新回のみ）
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
@@ -79,8 +82,34 @@ def parse_markdown(text):
     return valid
 
 
-def fetch_latest():
-    """Jina AI Reader経由でみずほ銀行の最新ページを取得（直近数回分が載っている）"""
+def parse_tokai(html):
+    """tokaikensyo.com（フォールバック）の最新結果を解析する。
+    タグ除去後はこんな並び：
+        ロト７【第683回】 … 抽選日：2026年6月26日 … 当せん番号 11 21 22 25 28 29 36 ボーナス番号 08 32
+    最新回1件のみ取得できればよい（新regの検出に十分）。
+    """
+    text = re.sub(r'<[^>]+>', ' ', html)
+    text = text.replace('&nbsp;', ' ')
+    text = re.sub(r'\s+', ' ', text)
+    m = re.search(
+        r'第\s*(\d+)\s*回'
+        r'.*?(?:抽せん日|抽選日)[：:\s]*(\d{4})年\s*(\d{1,2})月\s*(\d{1,2})日'
+        r'.*?当せん番号\s+((?:\d{1,2}\s+){6}\d{1,2})'
+        r'\s+ボーナス(?:数字|番号)\s+(\d{1,2})\s+(\d{1,2})',
+        text)
+    if not m:
+        return {}
+    rn = int(m.group(1))
+    dt = f"{m.group(2)}-{int(m.group(3)):02d}-{int(m.group(4)):02d}"
+    nums = sorted(int(x) for x in m.group(5).split())
+    bonus = sorted([int(m.group(6)), int(m.group(7))])
+    if len(nums) != 7:
+        return {}
+    return {rn: {"round": rn, "date": dt, "numbers": nums, "bonus": bonus}}
+
+
+def fetch_jina():
+    """主: Jina AI Reader経由でみずほ最新ページ(markdown)。直近数回分。"""
     for attempt in range(1, 4):
         try:
             res = requests.get(JINA_URL, headers=HEADERS, timeout=90)
@@ -88,15 +117,48 @@ def fetch_latest():
                 res.encoding = "utf-8"
                 data = parse_markdown(res.text)
                 if data:
-                    print(f"✅ Jina経由で取得: {len(data)}件（第{min(data)}〜{max(data)}回）")
+                    print(f"✅ [Jina] {len(data)}件取得（第{min(data)}〜{max(data)}回）")
                     return data
-                print(f"⚠️ 取得できたが解析0件（試行{attempt}）")
+                print(f"⚠️ [Jina] 取得できたが解析0件（試行{attempt}）")
             else:
-                print(f"⚠️ Jina HTTP {res.status_code}（試行{attempt}）")
+                print(f"⚠️ [Jina] HTTP {res.status_code}（試行{attempt}）")
         except Exception as e:
-            print(f"⚠️ Jina取得失敗（試行{attempt}）: {e}")
+            print(f"⚠️ [Jina] 取得失敗（試行{attempt}）: {e}")
         time.sleep(5)
     return {}
+
+
+def fetch_tokai():
+    """フォールバック: tokaikensyo.com を直接取得（Jina非依存・Akamai非保護）。最新回のみ。"""
+    for attempt in range(1, 3):
+        try:
+            res = requests.get(TOKAI_URL, headers=HEADERS, timeout=30)
+            if res.status_code == 200:
+                res.encoding = res.apparent_encoding or "utf-8"
+                data = parse_tokai(res.text)
+                if data:
+                    print(f"✅ [tokai] フォールバック取得（第{max(data)}回）")
+                    return data
+                print(f"⚠️ [tokai] 取得できたが解析0件（試行{attempt}）")
+            else:
+                print(f"⚠️ [tokai] HTTP {res.status_code}（試行{attempt}）")
+        except Exception as e:
+            print(f"⚠️ [tokai] 取得失敗（試行{attempt}）: {e}")
+        time.sleep(3)
+    return {}
+
+
+def fetch_latest():
+    """主(Jina)→ダメならフォールバック(tokai)の順で最新データを取得。"""
+    # テスト用: FORCE_FALLBACK=1 で主をスキップしフォールバックを検証できる
+    if os.environ.get("FORCE_FALLBACK") == "1":
+        print("🧪 FORCE_FALLBACK=1 → Jinaをスキップしてフォールバックを試行")
+    else:
+        data = fetch_jina()
+        if data:
+            return data
+        print("⚠️ 主(Jina)が取得できず → フォールバックへ切替")
+    return fetch_tokai()
 
 
 def save_data(merged):
