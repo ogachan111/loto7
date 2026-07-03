@@ -11,13 +11,15 @@
 
 | ファイル | 役割 |
 |---|---|
-| `index.html` | 公開される本体（**ビルド成果物**。`app.jsx` をトランスパイルして埋め込んだもの） |
-| `app.jsx` | フロントのソース（React/JSX）。**アプリのロジックはここを編集する** |
+| `index.html` | 公開される本体（**ビルド成果物**。`predict_core.js` + `app.jsx` をトランスパイルして埋め込んだもの） |
+| `app.jsx` | フロントのソース（React/JSX）。**画面まわりのロジックはここを編集する** |
+| `predict_core.js` | **予想エンジン（共有モジュール）**。統計計算・予想生成・等級判定・解説生成。アプリとメールの両方がこれを使う（ズレない） |
+| `predict.js` | Node CLI。`data.json` から `prediction.json`（前回予想の答え合わせ＋次回予想）を生成。メール通知用・依存なし |
 | `index.template.html` | HTMLシェル（`<head>`・CSS・React CDN）。`/*__APP__*/` にJSが入る |
-| `build.js` | `app.jsx` + `data.json` → `index.html` を生成するビルドスクリプト |
+| `build.js` | `predict_core.js` + `app.jsx` + `data.json` → `index.html` を生成するビルドスクリプト |
 | `data.json` | 全当選番号（全回） |
 | `fetch_loto7.py` | 当選番号を取得して `data.json` / `index.html` を更新（取得は多段フォールバック） |
-| `notify_loto7.py` | 新しい回が出た時に当選チェック＋結果メール送信 |
+| `notify_loto7.py` | 新しい回が出た時に結果＋前回予想の答え合わせ＋次回予想＋統計をメール送信（`prediction.json` を読む。無ければ結果のみの簡易版） |
 | `notify_error.py` | 取得失敗／データ滞留時に自分へ警告メール |
 | `.github/workflows/update-loto7.yml` | 自動更新ワークフロー |
 | `manifest.json` / `sw.js` / `icon.png` | PWA用 |
@@ -61,8 +63,9 @@ node build.js
 - 手動実行（workflow_dispatch）の入力:
   - `test_alert=true` … エラー通知メールをテスト送信（`FORCE_STALE`）
   - `test_fallback=true` … 主(Jina)をスキップしフォールバック取得を検証（`FORCE_FALLBACK`）
+  - `test_email=true` … 新規回が無くても結果＋予想メールをテスト送信
 - 必要な Secrets: `GMAIL_USER` / `GMAIL_APP_PASSWORD` / `NOTIFY_EMAIL`
-- ステップ: 取得 → push（`index.html`/`data.json`）→ **新regがある時だけ**結果メール → 失敗/滞留時は警告メール
+- ステップ: 取得 → push（`index.html`/`data.json`）→ **新規回がある時だけ** `node predict.js` で `prediction.json` 生成 → 結果＋予想メール → 失敗/滞留時は警告メール
 
 ### cron-job.org（定刻起動）
 GitHub無料cronは最大半日遅延するため、cron-job.org から毎週金21:00 JST に workflow_dispatch を叩いて定刻化している。
@@ -73,7 +76,7 @@ GitHub無料cronは最大半日遅延するため、cron-job.org から毎週金
 - 🔑 **自動催促あり**: 期限21日前から、毎週の更新実行時に `notify_token.py` が更新手順をメール通知する（更新したら同ファイルの `EXPIRY` も書き換える）。
 
 ### CIによる自動ビルド（`build.yml`）
-`app.jsx` / `index.template.html` / `build.js` を push すると、Actions が `node build.js` を実行して `index.html` を自動生成・コミットする（babel は 8.0.3 固定で出力安定）。`index.html` の変更では再起動しないのでループしない。
+`app.jsx` / `predict_core.js` / `index.template.html` / `build.js` を push すると、Actions が `node build.js` を実行して `index.html` を自動生成・コミットする（babel は 8.0.3 固定で出力安定）。`index.html` の変更では再起動しないのでループしない。
 
 ---
 

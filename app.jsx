@@ -13,159 +13,9 @@ const DATA_JSON_URL = "https://ogachan111.github.io/loto7/data.json";
 const SEED_DATA = [{"round": 683, "date": "2026-06-26", "numbers": [11, 21, 22, 25, 28, 29, 36], "bonus": [8, 32]}, {"round": 682, "date": "2026-06-19", "numbers": [11, 14, 17, 23, 28, 30, 36], "bonus": [12, 20]}, {"round": 681, "date": "2026-06-12", "numbers": [1, 10, 12, 13, 19, 33, 35], "bonus": [14, 37]}, {"round": 680, "date": "2026-06-05", "numbers": [9, 10, 22, 26, 27, 31, 36], "bonus": [20, 29]}, {"round": 679, "date": "2026-05-29", "numbers": [6, 8, 9, 18, 22, 24, 35], "bonus": [4, 20]}, {"round": 678, "date": "2026-05-22", "numbers": [2, 6, 12, 15, 24, 26, 34], "bonus": [18, 20]}, {"round": 677, "date": "2026-05-15", "numbers": [5, 6, 7, 8, 15, 17, 19], "bonus": [1, 33]}, {"round": 676, "date": "2026-05-08", "numbers": [2, 6, 15, 19, 20, 22, 27], "bonus": [31, 33]}, {"round": 675, "date": "2026-05-01", "numbers": [5, 8, 16, 18, 24, 28, 31], "bonus": [6, 23]}, {"round": 674, "date": "2026-04-24", "numbers": [1, 6, 7, 9, 12, 22, 26], "bonus": [8, 14]}, {"round": 673, "date": "2026-04-17", "numbers": [6, 9, 10, 12, 16, 24, 32], "bonus": [17, 19]}, {"round": 672, "date": "2026-04-10", "numbers": [7, 11, 15, 16, 17, 24, 33], "bonus": [6, 9]}, {"round": 671, "date": "2026-04-03", "numbers": [7, 13, 16, 22, 28, 33, 36], "bonus": [2, 25]}, {"round": 670, "date": "2026-03-27", "numbers": [3, 4, 9, 10, 18, 21, 37], "bonus": [15, 23]}, {"round": 669, "date": "2026-03-20", "numbers": [3, 5, 6, 7, 9, 13, 16], "bonus": [11, 23]}, {"round": 668, "date": "2026-03-13", "numbers": [1, 8, 11, 14, 18, 22, 29], "bonus": [19, 35]}, {"round": 667, "date": "2026-03-06", "numbers": [9, 13, 20, 22, 28, 29, 33], "bonus": [21, 23]}, {"round": 666, "date": "2026-02-27", "numbers": [2, 17, 18, 22, 23, 25, 33], "bonus": [16, 34]}, {"round": 665, "date": "2026-02-20", "numbers": [6, 8, 14, 19, 22, 25, 35], "bonus": [12, 17]}, {"round": 664, "date": "2026-02-13", "numbers": [3, 6, 8, 14, 21, 22, 31], "bonus": [17, 37]}, {"round": 663, "date": "2026-02-06", "numbers": [4, 6, 10, 11, 13, 17, 23], "bonus": [25, 32]}, {"round": 662, "date": "2026-01-30", "numbers": [4, 14, 15, 21, 22, 24, 37], "bonus": [5, 20]}, {"round": 661, "date": "2026-01-23", "numbers": [7, 12, 17, 22, 31, 34, 35], "bonus": [20, 32]}, {"round": 660, "date": "2026-01-16", "numbers": [4, 6, 12, 13, 16, 17, 31], "bonus": [14, 20]}, {"round": 659, "date": "2026-01-09", "numbers": [2, 8, 9, 14, 27, 34, 36], "bonus": [5, 18]}, {"round": 658, "date": "2025-12-26", "numbers": [10, 12, 16, 18, 19, 22, 37], "bonus": [11, 20]}, {"round": 657, "date": "2025-12-19", "numbers": [9, 11, 16, 23, 27, 29, 32], "bonus": [6, 24]}, {"round": 656, "date": "2025-12-12", "numbers": [1, 4, 6, 20, 30, 34, 37], "bonus": [14, 25]}, {"round": 655, "date": "2025-12-05", "numbers": [4, 5, 12, 13, 24, 26, 33], "bonus": [3, 14]}, {"round": 654, "date": "2025-11-28", "numbers": [3, 12, 25, 29, 30, 32, 33], "bonus": [28, 31]}, {"round": 653, "date": "2025-11-21", "numbers": [6, 7, 12, 25, 26, 30, 33], "bonus": [13, 15]}, {"round": 652, "date": "2025-11-14", "numbers": [1, 16, 21, 26, 27, 30, 35], "bonus": [6, 37]}, {"round": 651, "date": "2025-11-07", "numbers": [2, 13, 19, 20, 24, 26, 35], "bonus": [29, 36]}, {"round": 650, "date": "2025-10-31", "numbers": [1, 8, 10, 14, 25, 33, 35], "bonus": [12, 21]}, {"round": 649, "date": "2025-10-24", "numbers": [12, 22, 23, 26, 33, 35, 37], "bonus": [2, 21]}, {"round": 648, "date": "2025-10-17", "numbers": [3, 17, 19, 24, 28, 29, 35], "bonus": [7, 13]}, {"round": 647, "date": "2025-10-10", "numbers": [4, 5, 9, 13, 17, 22, 28], "bonus": [18, 31]}, {"round": 646, "date": "2025-10-03", "numbers": [5, 12, 13, 15, 18, 35, 37], "bonus": [11, 29]}, {"round": 645, "date": "2025-09-26", "numbers": [7, 10, 16, 20, 26, 32, 35], "bonus": [24, 33]}, {"round": 644, "date": "2025-09-19", "numbers": [1, 11, 12, 14, 20, 26, 29], "bonus": [2, 5]}, {"round": 643, "date": "2025-09-12", "numbers": [1, 5, 15, 16, 18, 27, 34], "bonus": [19, 22]}, {"round": 642, "date": "2025-09-05", "numbers": [1, 7, 22, 23, 33, 34, 35], "bonus": [2, 24]}, {"round": 641, "date": "2025-08-29", "numbers": [1, 3, 7, 23, 24, 33, 36], "bonus": [17, 30]}, {"round": 640, "date": "2025-08-22", "numbers": [2, 7, 9, 12, 13, 14, 29], "bonus": [15, 30]}, {"round": 639, "date": "2025-08-15", "numbers": [5, 9, 12, 15, 30, 31, 34], "bonus": [13, 29]}, {"round": 638, "date": "2025-08-08", "numbers": [1, 6, 18, 19, 35, 36, 37], "bonus": [11, 24]}, {"round": 637, "date": "2025-08-01", "numbers": [1, 4, 7, 8, 9, 20, 21], "bonus": [11, 30]}, {"round": 636, "date": "2025-07-25", "numbers": [10, 14, 17, 20, 26, 27, 29], "bonus": [3, 11]}, {"round": 635, "date": "2025-07-18", "numbers": [10, 12, 20, 29, 30, 31, 34], "bonus": [4, 15]}, {"round": 634, "date": "2025-07-11", "numbers": [2, 12, 18, 29, 32, 36, 37], "bonus": [5, 21]}];
 const AUTO_MS = 10*60*1000;
 
-// ── 等級判定 ──
-const judgeGrade = (my, win, bon) => {
-  const s = new Set(my);
-  const m = win.filter(n=>s.has(n)).length;
-  const b = bon.filter(n=>s.has(n)).length;
-  if(m===7)               return {grade:1,label:"🏆 1等！",color:"#fde047",bg:"#78350f"};
-  if(m===6&&b>=1)         return {grade:2,label:"🥇 2等！",color:"#fb923c",bg:"#7c2d12"};
-  if(m===6)               return {grade:3,label:"🥈 3等！",color:"#fb923c",bg:"#7c2d12"};
-  if(m===5&&b>=1)         return {grade:4,label:"🥉 4等！",color:"#a5b4fc",bg:"#312e81"};
-  if(m===5)               return {grade:5,label:"✨ 5等！",color:"#a5b4fc",bg:"#312e81"};
-  if(m===4)               return {grade:6,label:"🎉 6等！",color:"#5eead4",bg:"#134e4a"};
-  if(m===3||(m===2&&b>=1))return{grade:7,label:"🎊 7等！",color:"#86efac",bg:"#14532d"};
-  return null;
-};
-
-// ── 解説生成（統計ベース・ローカル / AI APIは使わない） ──
-const jnum = (arr) => arr.map(n=>n+"番").join("・");
-const genCommentary = (stats, byFreq, sets) => {
-  const hotTop = new Set(byFreq.slice(0,10).map(x=>x.num));
-  const lines = sets.map((s,i)=>{
-    const sum = s.numbers.reduce((a,b)=>a+b,0);
-    const recent5In = s.numbers.filter(n=>stats.recent5.has(n));
-    const coldIn    = s.numbers.filter(n=>!stats.recent20.has(n));
-    const hotIn     = s.numbers.filter(n=>hotTop.has(n));
-    const sumDesc = sum<126 ? "やや低め" : sum>148 ? "やや高め" : "過去平均帯(約133)";
-    const head =
-      s.tag==="hot"  ? "頻出数字中心のホット型" :
-      s.tag==="bal"  ? "高めの合計を狙うバランス型" :
-      s.tag==="cold" ? "直近未出現を混ぜたリバウンド型" :
-                       "平均合計帯を狙う安定型";
-    let detail = "";
-    if(recent5In.length)  detail += `直近5回でも出た${jnum(recent5In)}を含む。`;
-    else if(hotIn.length) detail += `頻出の${jnum(hotIn.slice(0,3))}を採用。`;
-    if(coldIn.length)     detail += `${jnum(coldIn)}は直近20回未出現のリバウンド候補。`;
-    return `セット${i+1}: ${head}。合計${sum}（${sumDesc}）。${detail}`.trim();
-  });
-  const top3 = byFreq.slice(0,3).map(x=>`${x.num}番(${x.count}回)`).join("・");
-  const coldCount = 37 - stats.recent20.size;
-  const intro = `${stats.n}回分を分析。全期間の頻出は${top3}。直近20回の未出現は${coldCount}個。各セットは合計値が出やすい帯に収まるよう構成しています。`;
-  return intro + "\n\n" + lines.join("\n");
-};
-
-// ── 統計計算（682件対応・重み付きスコア） ──
-const calcStats = (history) => {
-  const n = history.length;
-  // 全期間頻度
-  const freq = {}; for(let i=1;i<=37;i++) freq[i]=0;
-  history.forEach(d=>d.numbers.forEach(n=>freq[n]++));
-
-  // 重み付きスコア（直近ほど重視）
-  const score = {}; for(let i=1;i<=37;i++) score[i]=0;
-  history.forEach((d,i)=>{
-    const w = Math.exp(-i/(n*0.4));
-    d.numbers.forEach(n=>{ score[n]+=w; });
-  });
-
-  // 直近20回の出現数字
-  const recent20 = new Set(history.slice(0,20).flatMap(d=>d.numbers));
-  // 直近5回の出現数字
-  const recent5  = new Set(history.slice(0,5).flatMap(d=>d.numbers));
-
-  // ボーナス数字頻度
-  const bonusFreq = {}; for(let i=1;i<=37;i++) bonusFreq[i]=0;
-  history.forEach(d=>d.bonus.forEach(n=>bonusFreq[n]++));
-
-  // 連続ペア出現頻度
-  const pairFreq = {};
-  history.forEach(d=>{
-    const nums = [...d.numbers].sort((a,b)=>a-b);
-    for(let i=0;i<nums.length-1;i++){
-      if(nums[i+1]-nums[i]===1){
-        const key=`${nums[i]}-${nums[i+1]}`;
-        pairFreq[key]=(pairFreq[key]||0)+1;
-      }
-    }
-  });
-
-  // 直近20回のボーナス数字
-  const recentBonus20 = new Set(history.slice(0,20).flatMap(d=>d.bonus));
-
-  return { freq, score, recent20, recent5, bonusFreq, pairFreq, recentBonus20, n };
-};
-
-// ── 予想アルゴリズム（合計値傾向対応・確定予想） ──
-// シード付き乱数。同じシード（=同じ回）なら毎回まったく同じ結果になり、
-// 「生成」を押すたびに番号がコロコロ変わらない（次回抽選まで固定）。
-let RNG = Math.random;
-const mulberry32 = (seed) => {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6D2B79F5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-};
-// RNG を使った安定シャッフル（Fisher–Yates）
-const rnd = (arr, n) => {
-  const a = [...arr];
-  for(let i=a.length-1; i>0; i--){
-    const j = Math.floor(RNG() * (i+1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a.slice(0, n);
-};
-
-// 合計値が目標範囲に入る7個を生成
-const predictWithSum = (stats, targetMin, targetMax, useCold=false) => {
-  const sorted = Object.entries(stats.score).map(([n,v])=>({num:+n,score:v})).sort((a,b)=>b.score-a.score);
-  const top20 = sorted.slice(0,20).map(x=>x.num);
-  const cold = Array.from({length:37},(_,i)=>i+1).filter(n=>!stats.recent20.has(n));
-  for(let attempt=0; attempt<3000; attempt++){
-    let pick;
-    if(useCold && cold.length >= 2){
-      const coldPick = rnd(cold, 2);
-      const hotPool = top20.filter(n=>!coldPick.includes(n));
-      pick = [...coldPick, ...rnd(hotPool, 5)];
-    } else {
-      pick = rnd(top20, 7);
-    }
-    const s = pick.reduce((a,b)=>a+b, 0);
-    if(s >= targetMin && s <= targetMax) return pick.sort((a,b)=>a-b);
-  }
-  return rnd(sorted.slice(0,15), 7).map(x=>x.num).sort((a,b)=>a-b);
-};
-
-// ボーナス数字予想（頻出1個＋コールド1個）
-const predictBonus = (stats, excludeNums) => {
-  const bonusSorted = Object.entries(stats.bonusFreq).map(([n,v])=>({num:+n,score:v})).sort((a,b)=>b.score-a.score);
-  const bonusHot = bonusSorted.slice(0,10).map(x=>x.num).filter(n=>!excludeNums.has(n));
-  const bonusCold = Array.from({length:37},(_,i)=>i+1).filter(n=>!stats.recentBonus20.has(n) && !excludeNums.has(n));
-  const b1 = bonusHot.length>0 ? bonusHot[Math.floor(RNG()*Math.min(5,bonusHot.length))] : bonusSorted.find(x=>!excludeNums.has(x.num))?.num||14;
-  const pool2 = bonusCold.filter(n=>n!==b1);
-  const b2 = pool2.length>0 ? pool2[Math.floor(RNG()*pool2.length)] : bonusSorted.filter(x=>!excludeNums.has(x.num)&&x.num!==b1)[0]?.num||20;
-  return [b1,b2].sort((a,b)=>a-b);
-};
-
-const genSets = (stats, seed) => {
-  // 同じ回(seed)なら毎回同じ4セットになるよう乱数を固定
-  RNG = mulberry32((seed || 0) + 1);
-  const s1 = predictWithSum(stats, 126, 136, false);
-  const s2 = predictWithSum(stats, 138, 148, false);
-  const s3 = predictWithSum(stats, 126, 143, true);
-  const s4 = predictWithSum(stats, 129, 137, false);
-  const sum1=s1.reduce((a,b)=>a+b,0), sum2=s2.reduce((a,b)=>a+b,0);
-  const sum3=s3.reduce((a,b)=>a+b,0), sum4=s4.reduce((a,b)=>a+b,0);
-  return [
-    {label:"🔥 ホット×合計130狙い",    tag:"hot",  desc:`頻出数字で合計${sum1}（682回で出やすい帯126〜136）`,   numbers:s1, bonus:predictBonus(stats,new Set(s1))},
-    {label:"⚖️ バランス×合計143狙い",  tag:"bal",  desc:`バランス重視で合計${sum2}（出やすい帯138〜148）`,      numbers:s2, bonus:predictBonus(stats,new Set(s2))},
-    {label:"❄️ コールド×合計範囲内",   tag:"cold", desc:`直近未出現を混え合計${sum3}（リバウンド狙い）`,         numbers:s3, bonus:predictBonus(stats,new Set(s3))},
-    {label:"🎯 平均合計133狙い",        tag:"con",  desc:`682回平均133.4に近い合計${sum4}を狙う`,               numbers:s4, bonus:predictBonus(stats,new Set(s4))},
-  ];
-};
+// ── 予想ロジックは predict_core.js（共有モジュール）にある ──
+// judgeGrade / calcStats / byFreqOf / genSets / genCommentary はビルド時に
+// このファイルの前に連結されるグローバル関数（メール通知と同一ロジック）。
 
 // ── Ball コンポーネント ──
 const BALL_COLORS = {
@@ -214,10 +64,61 @@ function App() {
 
   // 統計計算（682件対応）
   const stats = useMemo(()=>calcStats(history),[history]);
-  const byFreq = useMemo(()=>
-    Object.entries(stats.freq).map(([n,c])=>({num:+n,count:c})).sort((a,b)=>b.count-a.count),
-  [stats]);
+  const byFreq = useMemo(()=>byFreqOf(stats),[stats]);
   const maxF = byFreq[0]?.count || 1;
+
+  // 合計値の分布（60〜219を幅10で16ビン）と平均
+  const sumHist = useMemo(()=>{
+    const bins = Array.from({length:16},(_,i)=>({lo:60+i*10, count:0}));
+    stats.sums.forEach(s=>{
+      const idx = Math.min(15, Math.max(0, Math.floor((s-60)/10)));
+      bins[idx].count++;
+    });
+    const avg = stats.sums.length ? stats.sums.reduce((a,b)=>a+b,0)/stats.sums.length : 0;
+    return {bins, avg, max: Math.max(1,...bins.map(b=>b.count))};
+  },[stats]);
+
+  // 眠り数字（出ていない回数が多い順）
+  const sleepers = useMemo(()=>
+    Object.entries(stats.lastSeen)
+      .map(([n,idx])=>({num:+n, gap: idx<0 ? stats.n : idx}))
+      .sort((a,b)=>b.gap-a.gap).slice(0,8),
+  [stats]);
+
+  // ── バックテスト（成績タブ）──
+  // 予想はシード固定で決定論的なので、「その回の抽選前に出していたはずの予想」を
+  // 過去データから再現して実際の当選番号と照合できる。
+  const [backtest,setBacktest] = useState(null);
+  const computeBacktest = (hist) => {
+    const N = Math.min(20, Math.max(0, hist.length - 30)); // 直近20回（統計用に30回分は残す）
+    const rows = [];
+    const gradeCount = {};
+    const tagStats = {hot:{hits:0},bal:{hits:0},cold:{hits:0},con:{hits:0}};
+    let totalHits = 0, setCount = 0;
+    for(let i=0; i<N; i++){
+      const actual = hist[i];
+      const past = hist.slice(i+1);
+      const st = calcStats(past);
+      const predSets = genSets(st, past[0].round);
+      const sets = predSets.map(s=>{
+        const hits = s.numbers.filter(n=>actual.numbers.includes(n)).length;
+        const bHits = s.numbers.filter(n=>actual.bonus.includes(n)).length;
+        const g = judgeGrade(s.numbers, actual.numbers, actual.bonus);
+        totalHits += hits; setCount++;
+        tagStats[s.tag].hits += hits;
+        if(g) gradeCount[g.grade] = (gradeCount[g.grade]||0)+1;
+        return {tag:s.tag, label:s.label, numbers:s.numbers, hits, bHits, grade:g};
+      });
+      rows.push({round:actual.round, date:actual.date, win:actual.numbers, bonus:actual.bonus, sets});
+    }
+    return {rows, N, avg: setCount ? totalHits/setCount : 0, gradeCount, tagStats, latestRound: hist[0]?.round};
+  };
+  useEffect(()=>{
+    if(tab==="results" && history.length>30 && (!backtest || backtest.latestRound!==history[0].round)){
+      setBacktest(computeBacktest(history));
+    }
+  },[tab,history]);
+  const [openRound,setOpenRound] = useState(null);
 
   // 当選照合
   const checkWins = (hist, sv) => {
@@ -306,6 +207,7 @@ function App() {
   const tabs=[
     {id:"predict",icon:"🎯",label:"予想"},
     {id:"mysets", icon:"📌",label:"購入"},
+    {id:"results",icon:"🏅",label:"成績"},
     {id:"history",icon:"📋",label:"履歴"},
     {id:"stats",  icon:"📊",label:"統計"},
   ];
@@ -456,6 +358,106 @@ function App() {
           </div>
         )}
 
+        {/* 成績タブ（過去予想のバックテスト） */}
+        {tab==="results"&&(
+          <div>
+            {!backtest ? (
+              <div style={{textAlign:"center",padding:"60px 0",color:"#475569"}}>
+                <div style={{fontSize:32,marginBottom:10}} className="spin">⚙️</div>
+                <p style={{fontSize:13}}>過去の予想を再現して照合中...</p>
+              </div>
+            ):(
+              <div>
+                <div style={{background:"rgba(67,56,202,.2)",border:"1px solid rgba(99,102,241,.3)",borderRadius:14,padding:14,marginBottom:14}}>
+                  <p style={{margin:"0 0 4px",fontSize:12,fontWeight:700,color:"#a5b4fc"}}>🏅 予想の成績（直近{backtest.N}回で検証）</p>
+                  <p style={{margin:0,fontSize:10,color:"#64748b",lineHeight:1.6}}>
+                    各回の抽選前データだけで「その時の固定予想」を再現し、実際の当選番号と照合した結果です。
+                  </p>
+                </div>
+
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
+                  <div style={{background:"rgba(30,27,75,.5)",border:"1px solid rgba(51,65,85,.5)",borderRadius:14,padding:12,textAlign:"center"}}>
+                    <p style={{margin:"0 0 4px",fontSize:10,color:"#64748b"}}>平均一致数 / 1セット</p>
+                    <span style={{fontSize:22,fontWeight:900,color:"#a5b4fc"}}>{backtest.avg.toFixed(2)}個</span>
+                    <p style={{margin:"4px 0 0",fontSize:9,color:"#334155"}}>参考: ランダム購入の期待値は約1.32個</p>
+                  </div>
+                  <div style={{background:"rgba(30,27,75,.5)",border:"1px solid rgba(51,65,85,.5)",borderRadius:14,padding:12,textAlign:"center"}}>
+                    <p style={{margin:"0 0 4px",fontSize:10,color:"#64748b"}}>当選（{backtest.N}回×4セット中）</p>
+                    {Object.keys(backtest.gradeCount).length ? (
+                      <span style={{fontSize:14,fontWeight:700,color:"#86efac"}}>
+                        {Object.entries(backtest.gradeCount).sort((a,b)=>a[0]-b[0]).map(([g,c])=>`${g}等×${c}`).join(" ")}
+                      </span>
+                    ):(
+                      <span style={{fontSize:14,fontWeight:700,color:"#64748b"}}>該当なし</span>
+                    )}
+                    <p style={{margin:"4px 0 0",fontSize:9,color:"#334155"}}>7等=本数字3個一致など</p>
+                  </div>
+                </div>
+
+                <div style={{background:"rgba(30,27,75,.5)",border:"1px solid rgba(51,65,85,.5)",borderRadius:14,padding:12,marginBottom:14}}>
+                  <p style={{margin:"0 0 8px",fontSize:11,color:"#64748b"}}>型別の平均一致数（{backtest.N}回平均）</p>
+                  {[["hot","🔥 ホット型"],["bal","⚖️ バランス型"],["cold","❄️ コールド型"],["con","🎯 安定型"]].map(([tag,name])=>{
+                    const avg = backtest.N ? backtest.tagStats[tag].hits/backtest.N : 0;
+                    return (
+                      <div key={tag} style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
+                        <span style={{fontSize:11,color:TAG_COLOR[tag],width:92}}>{name}</span>
+                        <div style={{flex:1,background:"rgba(255,255,255,.06)",borderRadius:4,height:6}}>
+                          <div style={{height:6,background:TAG_COLOR[tag],borderRadius:4,width:`${Math.min(100,avg/3*100)}%`}}/>
+                        </div>
+                        <span style={{fontSize:10,color:"#475569",width:44,textAlign:"right"}}>{avg.toFixed(2)}個</span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <p style={{fontSize:11,color:"#475569",marginBottom:8}}>回ごとの結果（タップで詳細）</p>
+                {backtest.rows.map(r=>(
+                  <div key={r.round} onClick={()=>setOpenRound(openRound===r.round?null:r.round)}
+                    style={{background:"rgba(30,27,75,.5)",border:"1px solid rgba(51,65,85,.5)",borderRadius:14,padding:12,marginBottom:8,cursor:"pointer"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                      <span style={{fontSize:12,fontWeight:700,color:"#818cf8"}}>第{r.round}回 <span style={{fontSize:10,color:"#475569",fontWeight:400}}>{r.date}</span></span>
+                      <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                        {r.sets.map((s,i)=>(
+                          <span key={i} style={{fontSize:11,fontWeight:700,color:s.hits>=3?"#fde047":s.hits>=2?TAG_COLOR[s.tag]:"#475569"}}>
+                            {s.label.slice(0,2)}{s.hits}
+                          </span>
+                        ))}
+                        <span style={{fontSize:10,color:"#334155"}}>{openRound===r.round?"▲":"▼"}</span>
+                      </div>
+                    </div>
+                    {r.sets.some(s=>s.grade)&&(
+                      <p style={{margin:"6px 0 0",fontSize:11,fontWeight:700,color:"#86efac"}}>
+                        {r.sets.filter(s=>s.grade).map(s=>`${s.label} → ${s.grade.label}`).join(" / ")}
+                      </p>
+                    )}
+                    {openRound===r.round&&(
+                      <div style={{marginTop:10}}>
+                        <p style={{margin:"0 0 6px",fontSize:10,color:"#64748b"}}>当選番号</p>
+                        <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:10}}>
+                          {r.win.map(n=><Ball key={n} num={n} type="main" sm/>)}
+                          <span style={{fontSize:10,color:"#f43f5e",alignSelf:"center",fontWeight:700}}>B</span>
+                          {r.bonus.map(n=><Ball key={n} num={n} type="bonus" sm/>)}
+                        </div>
+                        {r.sets.map((s,i)=>(
+                          <div key={i} style={{marginBottom:8}}>
+                            <p style={{margin:"0 0 4px",fontSize:10,color:TAG_COLOR[s.tag]}}>{s.label}（{s.hits}個一致{s.bHits?` +B${s.bHits}`:""}{s.grade?` ${s.grade.label}`:""}）</p>
+                            <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+                              {s.numbers.map(n=><Ball key={n} num={n} type={s.tag} sm hl={r.win.includes(n)}/>)}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+                <p style={{textAlign:"center",fontSize:10,color:"#334155",margin:"10px 0 16px"}}>
+                  ※現在の予想アルゴリズムを過去データに当てはめた検証値です。将来の当選を約束するものではありません。
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* 履歴タブ */}
         {tab==="history"&&(
           <div>
@@ -526,6 +528,42 @@ function App() {
                   <p style={{fontSize:11,color:"#475569"}}>全数字が直近20回以内に出現しています</p>
                 )}
               </div>
+            </div>
+
+            {/* 合計値の分布 */}
+            <div style={{background:"rgba(30,27,75,.5)",border:"1px solid rgba(51,65,85,.5)",borderRadius:14,padding:14,marginBottom:14}}>
+              <p style={{margin:"0 0 2px",fontSize:11,color:"#64748b"}}>📈 当選番号の合計値分布（全{stats.n}回）</p>
+              <p style={{margin:"0 0 10px",fontSize:10,color:"#334155"}}>平均 {sumHist.avg.toFixed(1)}。<span style={{color:"#a5b4fc"}}>紫のバー</span>が予想の狙う帯（120〜149）</p>
+              <div style={{display:"flex",alignItems:"flex-end",gap:2,height:80}}>
+                {sumHist.bins.map(b=>{
+                  const inBand = b.lo>=120 && b.lo<150;
+                  return (
+                    <div key={b.lo} style={{flex:1,display:"flex",flexDirection:"column",justifyContent:"flex-end",height:"100%"}}>
+                      <div style={{height:`${Math.round(b.count/sumHist.max*100)}%`,minHeight:b.count?2:0,
+                        background:inBand?"linear-gradient(180deg,#8b5cf6,#6366f1)":"rgba(100,116,139,.5)",borderRadius:"3px 3px 0 0"}}/>
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{display:"flex",gap:2,marginTop:4}}>
+                {sumHist.bins.map((b,i)=>(
+                  <div key={b.lo} style={{flex:1,textAlign:"center",fontSize:8,color:"#475569"}}>{i%4===0?b.lo:""}</div>
+                ))}
+              </div>
+            </div>
+
+            {/* 眠り数字 */}
+            <div style={{background:"rgba(30,27,75,.5)",border:"1px solid rgba(51,65,85,.5)",borderRadius:14,padding:14,marginBottom:14}}>
+              <p style={{margin:"0 0 8px",fontSize:11,color:"#64748b"}}>😴 眠り数字ランキング（出ていない回数が多い順）</p>
+              <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+                {sleepers.map(s=>(
+                  <div key={s.num} style={{textAlign:"center"}}>
+                    <Ball num={s.num} type="cold" sm/>
+                    <div style={{fontSize:9,color:"#38bdf8",marginTop:2}}>{s.gap}回</div>
+                  </div>
+                ))}
+              </div>
+              <p style={{margin:"8px 0 0",fontSize:9,color:"#334155"}}>「N回」= 直近N回の抽選で出ていない（0回=最新回で出た）</p>
             </div>
 
             <div style={{background:"rgba(30,27,75,.5)",border:"1px solid rgba(51,65,85,.5)",borderRadius:14,padding:14,marginBottom:14}}>

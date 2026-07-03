@@ -7,6 +7,7 @@ on:
     branches: [main1]
     paths:
       - 'app.jsx'
+      - 'predict_core.js'
       - 'index.template.html'
       - 'build.js'
   workflow_dispatch:

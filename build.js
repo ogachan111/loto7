@@ -17,6 +17,9 @@ const path = require('path');
 const Babel = require('@babel/standalone');
 
 const HERE = __dirname;
+// 予想エンジン（共有モジュール）を app.jsx の前に連結する。
+// ブラウザでは module が無いので export ガードは素通りし、グローバル関数として使える。
+const core = fs.readFileSync(path.join(HERE, 'predict_core.js'), 'utf8');
 let jsx = fs.readFileSync(path.join(HERE, 'app.jsx'), 'utf8');
 const template = fs.readFileSync(path.join(HERE, 'index.template.html'), 'utf8');
 
@@ -31,7 +34,7 @@ try {
 }
 
 // JSX → JS（preset react のみ。const/arrow等のES2015+はそのまま=モダンブラウザ前提）
-const { code } = Babel.transform(jsx, {
+const { code } = Babel.transform(core + '\n' + jsx, {
   // classic ランタイム = React.createElement を出力（CDNのグローバルReactを使う / import無し）
   presets: [['react', { runtime: 'classic' }]],
   filename: 'app.jsx',

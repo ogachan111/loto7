@@ -16,6 +16,10 @@ on:
         description: 'true にすると主(Jina)をスキップしフォールバック取得を検証します'
         required: false
         default: 'false'
+      test_email:
+        description: 'true にすると新規回が無くても結果+予想メールをテスト送信します'
+        required: false
+        default: 'false'
 
 permissions:
   contents: write
@@ -54,8 +58,12 @@ jobs:
           git diff --staged --quiet || git commit -m "🎯 ロト7当選番号自動更新: $(date '+%Y/%m/%d %H:%M') JST"
           git push
 
+      - name: メール用の予想データを生成（アプリと同一ロジック）
+        if: steps.fetch.outputs.new_round == 'true' || github.event.inputs.test_email == 'true'
+        run: node predict.js   # 依存なし・ランナー標準のNodeで動く
+
       - name: 当選チェック・メール通知
-        if: steps.fetch.outputs.new_round == 'true'
+        if: steps.fetch.outputs.new_round == 'true' || github.event.inputs.test_email == 'true'
         run: python notify_loto7.py
         env:
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
